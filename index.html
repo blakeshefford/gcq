@@ -16,10 +16,13 @@ const { useState, useEffect, useRef, useCallback } = React;
 
 /* ============================================================================
    SUPABASE CONFIG  —  EDIT THESE TWO VALUES, then host this file.
-   Supabase: Project Settings -> API -> "Project URL" and anon / public key.
+   Supabase dashboard: Project Settings -> API Keys.
+     * SUPABASE_URL      = your Project URL  (https://xxxx.supabase.co)
+     * SUPABASE_ANON_KEY = your Publishable key (sb_publishable_...)
+                           OR the legacy anon key (eyJ...). Either works.
 ============================================================================ */
-const SUPABASE_URL = "https://YOUR-PROJECT-ref.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+const SUPABASE_URL = "https://ytfvaoddykoqfhpyqzcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_k810-xD8BHBDuPOBjx3eoA_9mgymeWR";
 const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KEY);
 
 /* ============================================================================
@@ -181,16 +184,35 @@ const PLACE_POOL = ["Madagascar", "Patagonia", "Iceland", "Bhutan", "Namibia", "
 
 /* ============================================================================
    STORAGE LAYER — Supabase (PostgREST). Single shared key/value table 'kv'.
+   Works with either the new publishable key (sb_publishable_...) or the
+   legacy anon JWT key (eyJ...): a JWT is sent as a Bearer token, an opaque
+   key is sent only as apikey so the gateway resolves the anon role.
 ============================================================================ */
-const SB_HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" };
+const SB_KEY = SUPABASE_ANON_KEY;
+function sbHeaders(extra) {
+  const h = { apikey: SB_KEY, "Content-Type": "application/json" };
+  if (/^eyJ/.test(SB_KEY)) h.Authorization = "Bearer " + SB_KEY;
+  return extra ? { ...h, ...extra } : h;
+}
 async function sget(k) {
-  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: SB_HEADERS }); const rows = await r.json(); return rows && rows.length ? rows[0].value : null; } catch { return null; }
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: sbHeaders() });
+    const rows = await r.json();
+    return rows && rows.length ? rows[0].value : null;
+  } catch { return null; }
 }
 async function sset(k, v) {
-  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv", { method: "POST", headers: { ...SB_HEADERS, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: k, value: v }) }); return r.ok; } catch { return false; }
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv", { method: "POST", headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify({ key: k, value: v }) });
+    return r.ok;
+  } catch { return false; }
 }
 async function slist(prefix) {
-  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: SB_HEADERS }); const rows = await r.json(); return Array.isArray(rows) ? rows.map((x) => x.key) : []; } catch { return []; }
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() });
+    const rows = await r.json();
+    return Array.isArray(rows) ? rows.map((x) => x.key) : [];
+  } catch { return []; }
 }
 
 /* ============================================================================
@@ -1354,7 +1376,7 @@ function SetupNotice() {
       <div className="card">
         <div className="eyebrow" style={{ color: "var(--navy)" }}>Setup needed</div>
         <h2 className="h2" style={{ marginTop: 6 }}>Add your Supabase keys</h2>
-        <p style={{ fontSize: 14, marginTop: 8 }}>Open this HTML file in a text editor and replace <b>SUPABASE_URL</b> and <b>SUPABASE_ANON_KEY</b> near the top with the values from your Supabase project (Project Settings -> API). Run the SQL setup script once, re-save, and re-host.</p>
+        <p style={{ fontSize: 14, marginTop: 8 }}>Open this HTML file in a text editor and replace <b>SUPABASE_URL</b> and <b>SUPABASE_ANON_KEY</b> near the top with the values from your Supabase project (Project Settings -> API Keys). Run the SQL setup script once, re-save, and re-host.</p>
       </div>
     </div></div>
   );
