@@ -392,9 +392,7 @@ function App() {
   const refresh = useCallback(async (myRec) => {
     const rec = myRec || meRef.current;
     if (!rec) return;
-    const keys = await slist("inbox:" + rec.id + ":");
-    const evs = [];
-    for (const k of keys) { const e = await sget(k); if (e) evs.push(e); }
+    const evs = await sgetAll("inbox:" + rec.id + ":");
     setInbox(evs);
     const fl = await sget("flash:current");
     setFlash(fl && fl.endsAt > Date.now() ? fl : null);
@@ -800,9 +798,8 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
   }
 
   async function findMatch() {
-    const keys = await slist("users:");
-    const pool = [];
-    for (const k of keys) { const u = await sget(k); if (u && u.id !== me.id && !(me.connections || []).some((c) => c.id === u.id)) pool.push(u); }
+    const all = await sgetAll("users:");
+    const pool = all.filter((u) => u && u.id !== me.id && !(me.connections || []).some((c) => c.id === u.id));
     if (!pool.length) { ping("No new people to match yet"); return; }
     const pick = pool[Math.floor(Math.random() * pool.length)];
     setMatch(pick);
