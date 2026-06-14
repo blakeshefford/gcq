@@ -1156,11 +1156,12 @@ function BigScreen({ onExit }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     async function load() {
-      const keys = await slist("score:");
-      const all = [];
-      for (const k of keys) { const s = await sget(k); if (s) all.push(s); }
-      all.sort((a, b) => b.total - a.total);
-      setRows(all.slice(0, 12)); setCount(all.length);
+      try {
+        const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=like.score:*", { headers: sbHeaders() });
+        const rows = await r.json();
+        const all = (Array.isArray(rows) ? rows.map((x) => x.value) : []).sort((a, b) => (b.total || 0) - (a.total || 0));
+        setRows(all.slice(0, 12)); setCount(all.length);
+      } catch {}
     }
     load(); const t = setInterval(load, 12000); return () => clearInterval(t);
   }, []);
@@ -1219,9 +1220,11 @@ function AdminPanel({ onExit }) {
     const uk = await slist("users:"); const us = [];
     for (const k of uk) { const u = await sget(k); if (u) us.push(u); }
     setUsers(us);
-    const sk = await slist("score:"); const ss = [];
-    for (const k of sk) { const s = await sget(k); if (s) ss.push(s); }
-    ss.sort((a, b) => b.total - a.total); setScores(ss);
+    try {
+      const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=like.score:*", { headers: sbHeaders() });
+      const rows = await r.json();
+      setScores((Array.isArray(rows) ? rows.map((x) => x.value) : []).sort((a, b) => (b.total || 0) - (a.total || 0)));
+    } catch { setScores([]); }
     const fl = await sget("flash:current"); setFlashState(fl && fl.endsAt > Date.now() ? fl : null);
   }, []);
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
