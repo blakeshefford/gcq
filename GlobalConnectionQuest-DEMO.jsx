@@ -162,25 +162,19 @@ const PLACE_POOL = ["Madagascar", "Patagonia", "Iceland", "Bhutan", "Namibia", "
 ============================================================================ */
 const hasStore = false; // DEMO BUILD: always use in-memory storage
 const _mem = {};
-(function seedDemo() {
+(function seedDemo(){
   const demo = [
-    { code: "7044", name: "Yuki Tanaka", market: "Japan", team: "Investment", nationality: "Japanese", hobbies: ["Trail running", "Pottery", "Jazz records"], exotic: "Bhutan", total: 240 },
-    { code: "4821", name: "Mei Lin", market: "Singapore", team: "Distribution", nationality: "Singaporean", hobbies: ["Road cycling", "Sourdough baking", "Sci-fi novels"], exotic: "Patagonia", total: 180 },
-    { code: "5630", name: "Tom Becker", market: "United Kingdom", team: "Investment Risk", nationality: "British", hobbies: ["Skiing", "Chess", "Film photography"], exotic: "Iceland", total: 155 },
-    { code: "3318", name: "Sophie Martin", market: "Australia", team: "Marketing", nationality: "Australian", hobbies: ["Yoga", "Gardening", "Coffee roasting"], exotic: "Namibia", total: 130 },
-    { code: "9156", name: "Wei Zhang", market: "Mainland China", team: "Product", nationality: "Chinese", hobbies: ["Hiking", "Calligraphy", "Indie film"], exotic: "Mongolia", total: 110 },
-    { code: "2497", name: "Aroha Ng", market: "Hong Kong", team: "Operations", nationality: "Hong Konger", hobbies: ["Open-water swimming", "Cooking", "Travel"], exotic: "Petra", total: 95 },
-    { code: "6072", name: "Chen Wei-Lin", market: "Taiwan", team: "Technology", nationality: "Taiwanese", hobbies: ["Badminton", "Board games", "Night markets"], exotic: "Easter Island", total: 70 },
+    { code: "7044", name: "Yuki Tanaka", market: "Japan", team: "Investment", nationality: "Japanese", hobbies: ["Trail running","Pottery","Jazz records"], exotic: "Bhutan", total: 240 },
+    { code: "4821", name: "Mei Lin", market: "Singapore", team: "Distribution", nationality: "Singaporean", hobbies: ["Road cycling","Sourdough baking","Sci-fi novels"], exotic: "Patagonia", total: 180 },
+    { code: "5630", name: "Tom Becker", market: "United Kingdom", team: "Investment Risk", nationality: "British", hobbies: ["Skiing","Chess","Film photography"], exotic: "Iceland", total: 155 },
+    { code: "3318", name: "Sophie Martin", market: "Australia", team: "Marketing", nationality: "Australian", hobbies: ["Yoga","Gardening","Coffee roasting"], exotic: "Namibia", total: 130 },
+    { code: "9156", name: "Wei Zhang", market: "Mainland China", team: "Product", nationality: "Chinese", hobbies: ["Hiking","Calligraphy","Indie film"], exotic: "Mongolia", total: 110 },
+    { code: "2497", name: "Aroha Ng", market: "Hong Kong", team: "Operations", nationality: "Hong Konger", hobbies: ["Open-water swimming","Cooking","Travel"], exotic: "Petra", total: 95 },
+    { code: "6072", name: "Chen Wei-Lin", market: "Taiwan", team: "Technology", nationality: "Taiwanese", hobbies: ["Badminton","Board games","Night markets"], exotic: "Easter Island", total: 70 },
   ];
-  demo.forEach((x, i) => {
-    const id = "demo_" + x.code;
-    const email = x.name.toLowerCase().replace(/[^a-z]+/g, ".") + "@fil.com";
-    const rec = { id, code: x.code, email, name: x.name, market: x.market, team: x.team, nationality: x.nationality, hobbies: x.hobbies, exotic: x.exotic, languages: "English", table: String(2 + i), selfPoints: x.total, connections: [], triviaWith: [], missions: {}, japanQuiz: false, apacQuiz: false, apacDone: {}, createdAt: Date.now() - i * 60000 };
-    _mem["users:" + id] = JSON.stringify(rec);
-    _mem["code:" + x.code] = JSON.stringify({ id, name: x.name, market: x.market });
-    _mem["email:" + email] = JSON.stringify({ id });
-    _mem["score:" + id] = JSON.stringify({ id, name: x.name, market: x.market, total: x.total, charity: "" });
-  });
+  demo.forEach((x,i)=>{ const id="demo_"+x.code; const email=x.name.toLowerCase().replace(/[^a-z]+/g,".")+"@fil.com";
+    const rec={ id, code:x.code, email, name:x.name, market:x.market, team:x.team, nationality:x.nationality, hobbies:x.hobbies, exotic:x.exotic, languages:"English", table:String(2+i), selfPoints:x.total, connections:[], triviaWith:[], missions:{}, japanQuiz:false, apacQuiz:false, apacDone:{}, createdAt:Date.now()-i*60000 };
+    _mem["users:"+id]=JSON.stringify(rec); _mem["code:"+x.code]=JSON.stringify({id,name:x.name,market:x.market}); _mem["email:"+email]=JSON.stringify({id}); _mem["score:"+id]=JSON.stringify({id,name:x.name,market:x.market,total:x.total,charity:""}); });
 })();
 const store = {
   async get(k) {
@@ -247,6 +241,9 @@ function Styles() {
     .btn-primary{background:var(--green);color:#fff}
     .btn-navy{background:var(--navy);color:#fff}
     .btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--navy)}
+    .seg{appearance:none;border:1.5px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:#cdd9de;border-radius:11px;padding:11px 8px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;min-height:46px;line-height:1.15;transition:background .2s ease,border-color .2s ease,color .2s ease}
+    .seg:active{transform:scale(.98)}
+    .seg.on{background:var(--green);border-color:var(--green);color:#fff}
     .btn-seal{background:var(--seal);color:#fff}
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .input{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;
@@ -816,7 +813,7 @@ function QuizHub({ me, ping, setMe, refresh }) {
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Test &amp; be tested</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
         {[["me", "About me"], ["japan", "Japan culture"], ["apac", "APAC markets"]].map(([k, l]) => (
-          <button key={k} className={"btn " + (kind === k ? "btn-navy" : "btn-ghost")} style={{ fontSize: 12.5, padding: "11px 6px", minHeight: 46, lineHeight: 1.15 }} onClick={() => setKind(k)}>{l}</button>
+          <button key={k} className={"seg" + (kind === k ? " on" : "")} style={{ fontSize: 12.5, padding: "11px 6px" }} onClick={() => setKind(k)}>{l}</button>
         ))}
       </div>
       {kind === "me" && <Trivia me={me} ping={ping} setMe={setMe} refresh={refresh} />}
@@ -971,7 +968,7 @@ function Learn({ me, ping, setMe, refresh }) {
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Study up</h2>
       <div className="grid2" style={{ marginBottom: 12 }}>
         {[["ice", "Dinner icebreakers"], ["japan", "Japan etiquette"]].map(([k, l]) => (
-          <button key={k} className={"btn " + (sub === k ? "btn-navy" : "btn-ghost")} style={{ fontSize: 13, padding: "11px 8px" }} onClick={() => setSub(k)}>{l}</button>
+          <button key={k} className={"seg" + (sub === k ? " on" : "")} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
       {sub === "ice" && <Icebreakers />}

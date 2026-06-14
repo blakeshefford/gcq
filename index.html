@@ -14,13 +14,6 @@
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
 
-/* ============================================================================
-   SUPABASE CONFIG  —  EDIT THESE TWO VALUES, then host this file.
-   Supabase dashboard: Project Settings -> API Keys.
-     * SUPABASE_URL      = your Project URL  (https://xxxx.supabase.co)
-     * SUPABASE_ANON_KEY = your Publishable key (sb_publishable_...)
-                           OR the legacy anon key (eyJ...). Either works.
-============================================================================ */
 const SUPABASE_URL = "https://ytfvaoddykoqfhpyqzcj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_k810-xD8BHBDuPOBjx3eoA_9mgymeWR";
 const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KEY);
@@ -184,9 +177,7 @@ const PLACE_POOL = ["Madagascar", "Patagonia", "Iceland", "Bhutan", "Namibia", "
 
 /* ============================================================================
    STORAGE LAYER — Supabase (PostgREST). Single shared key/value table 'kv'.
-   Works with either the new publishable key (sb_publishable_...) or the
-   legacy anon JWT key (eyJ...): a JWT is sent as a Bearer token, an opaque
-   key is sent only as apikey so the gateway resolves the anon role.
+   Works with publishable (sb_publishable_...) or legacy anon JWT (eyJ...) keys.
 ============================================================================ */
 const SB_KEY = SUPABASE_ANON_KEY;
 function sbHeaders(extra) {
@@ -195,24 +186,13 @@ function sbHeaders(extra) {
   return extra ? { ...h, ...extra } : h;
 }
 async function sget(k) {
-  try {
-    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: sbHeaders() });
-    const rows = await r.json();
-    return rows && rows.length ? rows[0].value : null;
-  } catch { return null; }
+  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: sbHeaders() }); const rows = await r.json(); return rows && rows.length ? rows[0].value : null; } catch { return null; }
 }
 async function sset(k, v) {
-  try {
-    const r = await fetch(SUPABASE_URL + "/rest/v1/kv", { method: "POST", headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify({ key: k, value: v }) });
-    return r.ok;
-  } catch { return false; }
+  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv", { method: "POST", headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify({ key: k, value: v }) }); return r.ok; } catch { return false; }
 }
 async function slist(prefix) {
-  try {
-    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() });
-    const rows = await r.json();
-    return Array.isArray(rows) ? rows.map((x) => x.key) : [];
-  } catch { return []; }
+  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() }); const rows = await r.json(); return Array.isArray(rows) ? rows.map((x) => x.key) : []; } catch { return []; }
 }
 
 /* ============================================================================
@@ -262,6 +242,9 @@ function Styles() {
     .btn-primary{background:var(--green);color:#fff}
     .btn-navy{background:var(--navy);color:#fff}
     .btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--navy)}
+    .seg{appearance:none;border:1.5px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);color:#cdd9de;border-radius:11px;padding:11px 8px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;min-height:46px;line-height:1.15;transition:background .2s ease,border-color .2s ease,color .2s ease}
+    .seg:active{transform:scale(.98)}
+    .seg.on{background:var(--green);border-color:var(--green);color:#fff}
     .btn-seal{background:var(--seal);color:#fff}
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .input{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;
@@ -831,7 +814,7 @@ function QuizHub({ me, ping, setMe, refresh }) {
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Test &amp; be tested</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
         {[["me", "About me"], ["japan", "Japan culture"], ["apac", "APAC markets"]].map(([k, l]) => (
-          <button key={k} className={"btn " + (kind === k ? "btn-navy" : "btn-ghost")} style={{ fontSize: 12.5, padding: "11px 6px", minHeight: 46, lineHeight: 1.15 }} onClick={() => setKind(k)}>{l}</button>
+          <button key={k} className={"seg" + (kind === k ? " on" : "")} style={{ fontSize: 12.5, padding: "11px 6px" }} onClick={() => setKind(k)}>{l}</button>
         ))}
       </div>
       {kind === "me" && <Trivia me={me} ping={ping} setMe={setMe} refresh={refresh} />}
@@ -986,7 +969,7 @@ function Learn({ me, ping, setMe, refresh }) {
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Study up</h2>
       <div className="grid2" style={{ marginBottom: 12 }}>
         {[["ice", "Dinner icebreakers"], ["japan", "Japan etiquette"]].map(([k, l]) => (
-          <button key={k} className={"btn " + (sub === k ? "btn-navy" : "btn-ghost")} style={{ fontSize: 13, padding: "11px 8px" }} onClick={() => setSub(k)}>{l}</button>
+          <button key={k} className={"seg" + (sub === k ? " on" : "")} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
       {sub === "ice" && <Icebreakers />}
@@ -1370,18 +1353,8 @@ function AdminPanel({ onExit }) {
 
 
 function SetupNotice() {
-  return (
-    <div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}>
-      <Styles />
-      <div className="card">
-        <div className="eyebrow" style={{ color: "var(--navy)" }}>Setup needed</div>
-        <h2 className="h2" style={{ marginTop: 6 }}>Add your Supabase keys</h2>
-        <p style={{ fontSize: 14, marginTop: 8 }}>Open this HTML file in a text editor and replace <b>SUPABASE_URL</b> and <b>SUPABASE_ANON_KEY</b> near the top with the values from your Supabase project (Project Settings -> API Keys). Run the SQL setup script once, re-save, and re-host.</p>
-      </div>
-    </div></div>
-  );
+  return (<div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}><Styles /><div className="card"><div className="eyebrow" style={{ color: "var(--navy)" }}>Setup needed</div><h2 className="h2" style={{ marginTop: 6 }}>Add your Supabase keys</h2></div></div></div>);
 }
-
 const _root = ReactDOM.createRoot(document.getElementById("root"));
 _root.render(CONFIGURED ? <App /> : <SetupNotice />);
 </script>
