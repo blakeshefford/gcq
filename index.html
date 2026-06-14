@@ -3,29 +3,29 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>The Global Connection Quest · Fidelity International · Tokyo</title>
-<meta name="theme-color" content="#00314a" />
-<style>
-  html,body,#root{height:100%}
-  body{margin:0;background:#00314a}
-  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-    background:#00314a;color:#9fb4bd;font-family:system-ui,sans-serif;font-size:14px}
-</style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js" crossorigin></script>
+<title>The Global Connection Quest</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style>html,body{margin:0;height:100%;background:#00314a}#root{min-height:100%}</style>
 </head>
 <body>
-<div id="root"><div id="boot">Loading the Quest…</div></div>
-
+<div id="root"></div>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
 
 /* ============================================================================
+   SUPABASE CONFIG  —  EDIT THESE TWO VALUES, then host this file.
+   Supabase: Project Settings -> API -> "Project URL" and anon / public key.
+============================================================================ */
+const SUPABASE_URL = "https://YOUR-PROJECT-ref.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KEY);
+
+/* ============================================================================
    GLOBAL CONNECTION QUEST — Fidelity International Leadership Conference, Tokyo
-   Static HTML build for Cloudflare Pages. Backend = Pages Function at /api
-   (D1-backed key/value: get / set / list-by-prefix). Falls back to in-memory
-   when /api is unreachable (e.g. this preview) so you can click around.
+   Single-file production React app. Backend = artifact shared storage
+   (cross-device, concurrency-safe: every write owns a unique key).
    ----------------------------------------------------------------------------
    EDIT THESE CONSTANTS to finalise: MARKETS, content packs, scoring, admin PIN.
 ============================================================================ */
@@ -37,7 +37,7 @@ const MARKETS = [
   "Taiwan", "United Kingdom", "United States", "Other",
 ];
 
-const ADMIN_PIN = "tokyo2026"; // change before the event (note: client-side gate only, not real security)
+const ADMIN_PIN = "tokyo2026"; // change before the event
 
 // 3-letter codes shown on each passport stamp
 const CODES = {
@@ -52,8 +52,13 @@ const GLYPHS = ["\u2736", "\u2756", "\u2737", "\u25C6", "\u2742", "\u273F"];
 
 // ---- Scoring (tune as you like) --------------------------------------------
 const PTS = {
-  connect: 20, newMarket: 30, triviaCorrect: 50, triviaHost: 20,
-  trioBonus: 150, fullPassport: 300, table: 75,
+  connect: 20,        // each new person you meet (both sides earn)
+  newMarket: 30,      // bonus when that person unlocks a new market stamp
+  triviaCorrect: 50,  // per correct answer, to the guesser
+  triviaHost: 20,     // to the quiz host, once per round
+  trioBonus: 150,     // meet 3 different markets
+  fullPassport: 300,  // collect every market
+  table: 75,          // table challenge complete
 };
 
 // ---- Levels ----------------------------------------------------------------
@@ -65,7 +70,7 @@ const RANKS = [
   { min: 1500, name: "Global Citizen" },
 ];
 
-// ---- Missions --------------------------------------------------------------
+// ---- Missions (honour-system + auto-complete) ------------------------------
 const MISSIONS = [
   { id: "m_code", label: "Enter a peer's 4-digit Connect Code", pts: 15, auto: "firstConnect" },
   { id: "m_coffee", label: "Meet a new market peer during the morning coffee break", pts: 10 },
@@ -91,7 +96,7 @@ const ICEBREAKERS = [
   "What's a small ritual that keeps you grounded when things get noisy?",
 ];
 
-// ---- Did You Know? Japan ----------------------------------------------------
+// ---- Did You Know? Japan (true general etiquette/culture) -------------------
 const JAPAN_FACTS = [
   { t: "The bow (お辞儀)", d: "A slight bow (about 15°) is a casual greeting; a deeper 30–45° bow shows respect or thanks. Keep your back straight and eyes lowered." },
   { t: "Business cards (名刺 meishi)", d: "Offer and receive cards with both hands, card facing the recipient. Read it carefully before setting it down — never stuff it straight into a pocket." },
@@ -104,72 +109,88 @@ const JAPAN_FACTS = [
 ];
 
 const JAPAN_QUIZ = [
-  { q: "How should you hand over a business card?", options: ["One hand, quickly", "Both hands, card facing them", "Slide it across the table"], a: 1 },
-  { q: "What should you NOT do with chopsticks?", options: ["Rest them on a holder", "Stand them upright in rice", "Use them to eat noodles"], a: 1 },
-  { q: "Is tipping expected in Japan?", options: ["Yes, 10–15%", "No, it's not customary", "Only in taxis"], a: 1 },
+  { q: "How should you hand over a business card?", options: ["One hand, quickly", "Both hands, card facing them", "Slide it across the table"], a: 1, explain: "Offer and receive meishi with both hands, card facing the recipient, and read it before setting it down." },
+  { q: "What should you NOT do with chopsticks?", options: ["Rest them on a holder", "Stand them upright in rice", "Use them to eat noodles"], a: 1, explain: "Standing chopsticks upright in rice echoes funeral rites — always rest them on the holder." },
+  { q: "Is tipping expected in Japan?", options: ["Yes, 10–15%", "No, it's not customary", "Only in taxis"], a: 1, explain: "Tipping isn't customary and can cause confusion. Excellent service is simply the standard." },
 ];
 
-// ---- APAC Fast Facts — PLACEHOLDER. Replace with your real business facts ---
-const APAC_FACTS = {
-  "Japan": ["Replace with a real fact about the Japan business.", "Add a key client or product highlight."],
-  "Hong Kong": ["Replace with a real fact about Hong Kong.", "Add a market opportunity note."],
-  "Singapore": ["Replace with a real fact about Singapore.", "Add a growth statistic."],
-  "Mainland China": ["Replace with a real fact about Mainland China.", "Add a market highlight."],
-  "Taiwan": ["Replace with a real fact about Taiwan.", "Add an opportunity note."],
-  "Korea": ["Replace with a real fact about Korea.", "Add a client highlight."],
-  "Australia": ["Replace with a real fact about Australia.", "Add a client highlight."],
+// ---- APAC business quiz, by market (explanations double as the fast facts) --
+const APAC_QUIZ = {
+  "Australia": [
+    { q: "What is the local name for the mandatory retirement savings system in Australia?", options: ["401(k)", "Superannuation", "Mandatory Provident Fund", "National Pension Scheme"], a: 1, explain: "Australia's mandatory retirement saving structure is universally known as \u201cSuperannuation\u201d or \u201cSuper\u201d." },
+    { q: "Australia holds which rank globally for the size of its pension asset pool?", options: ["1st", "2nd", "4th", "10th"], a: 2, explain: "Backed by mandatory employer contributions, Australia has one of the world's largest pension asset pools, frequently ranked around fourth globally." },
+    { q: "Which two sectors make up over 50% of the S&P/ASX 200, creating concentration risk?", options: ["Technology and Healthcare", "Financials and Materials", "Consumer Discretionary and Real Estate", "Utilities and Energy"], a: 1, explain: "The ASX 200 is dominated by banks (Financials) and miners (Materials), concentrating domestic risk." },
+    { q: "What vehicle does Fidelity primarily use in Australia for single-trade access to active global portfolios?", options: ["Closed-end Mutual Funds", "Infrastructure Bonds", "Active ETFs", "Cryptocurrencies"], a: 2, explain: "Fidelity uses Active ETFs on the ASX \u2014 e.g. the Fidelity Global Future Leaders Active ETF (FCAP) \u2014 for seamless access to active global portfolios (FHCO is the domestic counterpart)." },
+    { q: "Why are ordinary Australian workers considered \u201caccidental micro-fund managers\u201d?", options: ["They all trade micro-cap tech stocks", "Employers must pay a percentage of earnings into their Super account", "The government forces them to buy mining shares", "Every Australian gets a day-trading account at birth"], a: 1, explain: "The mandatory Super system diverts part of every paycheque into market investments, making everyone an investor early." },
+    { q: "Why might a global-tech-seeking investor avoid a standard ASX 200 index fund?", options: ["The ASX 200 has zero technology companies", "It is severely underweight global tech and healthcare versus banks and miners", "Index funds are banned in Australia", "ASX 200 funds only allow institutional buyers"], a: 1, explain: "The ASX 200 is concentrated in financials and materials; for global tech/healthcare exposure, investors look to a global vehicle such as Fidelity's FCAP." },
+  ],
+  "Hong Kong": [
+    { q: "Which scheme connects international capital in Hong Kong with Mainland China via the Greater Bay Area?", options: ["Silk Road Alliance", "Wealth Management Connect", "Shanghai Free Trade Zone", "APAC Bond Initiative"], a: 1, explain: "Wealth Management Connect links Hong Kong's wealth sector directly with clients and assets across the Greater Bay Area." },
+    { q: "What does the retirement acronym \u201cMPF\u201d stand for?", options: ["Monthly Pension Fund", "Monetary Policy Framework", "Mandatory Provident Fund", "Market Portfolio Finance"], a: 2, explain: "The Mandatory Provident Fund (MPF) is Hong Kong's statutory, employment-based retirement system." },
+    { q: "On what date did Fidelity onboard its Retirement Master Trust to the eMPF Platform?", options: ["1 January 2024", "30 June 2025", "30 December 2025", "14 February 2026"], a: 2, explain: "The Fidelity Retirement Master Trust migrated onto the unified eMPF Platform with effect from 30 December 2025." },
+    { q: "What was the primary goal of launching the centralised eMPF Platform?", options: ["To ban paper money", "To standardise and digitise MPF administration, reducing costs", "To allow citizens to day-trade crypto", "To replace private asset managers with officials"], a: 1, explain: "The eMPF Platform centralises administration across trustees into one portal to drive down costs and paperwork." },
+    { q: "Besides the MPF, what is the other key legacy corporate retirement framework in Hong Kong?", options: ["NISA", "ORSO", "Superannuation", "VCC"], a: 1, explain: "ORSO (Occupational Retirement Schemes Ordinance) is the older alternative corporate retirement scheme framework." },
+    { q: "Hong Kong's private wealth market has a high concentration of which demographic?", options: ["Crypto miners", "Agricultural cooperatives", "Ultra-high-net-worth individuals", "State-backed manufacturing firms"], a: 2, explain: "Hong Kong has one of the highest densities of ultra-high-net-worth individuals globally." },
+  ],
+  "Japan": [
+    { q: "What structural economic challenge did Japan battle for decades before its renaissance?", options: ["Hyper-inflation", "Deflation", "Total lack of technology", "Corporate bankruptcy"], a: 1, explain: "Japan suffered decades of deflation, which discouraged consumer spending and corporate investment." },
+    { q: "Which institution led the charge on corporate governance reform in Japan?", options: ["The Bank of England", "The Tokyo Stock Exchange (TSE)", "The Federal Reserve", "The Kyoto Assembly"], a: 1, explain: "The TSE pushed reforms, pressuring listed firms to raise return on equity and shareholder value." },
+    { q: "Historically, what share of savings did Japanese households hold in cash or deposits?", options: ["Less than 5%", "Around 20%", "Over 50%", "Exactly 100%"], a: 2, explain: "Accustomed to deflation, Japanese households traditionally kept over half their wealth in cash or bank deposits." },
+    { q: "What is the tax-free retail investment account program recently revamped in Japan?", options: ["MPF", "NISA", "VCC", "Super"], a: 1, explain: "NISA (Nippon Individual Savings Account) is the tax-exempt framework overhauled to move retail money out of cash." },
+    { q: "In what year did Fidelity establish its presence in Japan?", options: ["1945", "1969", "1999", "2012"], a: 1, explain: "Fidelity set up its Japan operations in 1969 \u2014 over half a century of deep local experience." },
+    { q: "Which corporate habit did the TSE explicitly target to free up trapped capital?", options: ["High executive bonuses", "Corporate cash-hoarding", "Over-hiring international staff", "Relocating offices offshore"], a: 1, explain: "TSE reforms targeted the habit of hoarding balance-sheet cash instead of investing it or returning it to shareholders." },
+    { q: "How did the government make NISA more appealing to retail savers?", options: ["Made tax exemptions permanent and expanded investment limits", "Added an early-withdrawal penalty", "Limited it to senior citizens", "Forced 90% of salary into it"], a: 0, explain: "The government expanded annual caps and made the tax-free status permanent, creating a powerful long-term tool." },
+    { q: "The cultural shift in Japan is best described as moving from\u2026", options: ["Active investing to passive hoarding", "Saving to active investing", "Equities into real estate", "Domestic assets to European bonds"], a: 1, explain: "Driven by inflation and the new NISA, the trend is a historic transition from cash \u201csaving\u201d to equity \u201cinvesting\u201d." },
+  ],
+  "Korea": [
+    { q: "What local term describes massive family-run conglomerates like Samsung and Hyundai?", options: ["Keiretsu", "Chaebols", "State-Owned Enterprises", "Tech Hubs"], a: 1, explain: "Large, family-controlled industrial conglomerates dominating Korea's economy are known as Chaebols." },
+    { q: "What phenomenon describes Korean stocks trading at persistently lower valuations?", options: ["The Seoul Discount", "The Won Devaluation", "The Korea Discount", "The Chaebol Premium"], a: 2, explain: "The \u201cKorea Discount\u201d is the structurally lower valuation of Korean companies, tied to governance and low payouts." },
+    { q: "What government initiative was launched to solve the \u201cKorea Discount\u201d?", options: ["The Chaebol Breakup Initiative", "The Corporate Value-up Programme", "The Seoul Equity Surge", "The K-Pop Financial Plan"], a: 1, explain: "The Corporate Value-up Programme encourages listed firms to prioritise shareholder returns and governance." },
+    { q: "Korea holds a dominant global position manufacturing which components?", options: ["Aerospace software", "Memory chips and semiconductors", "Heavy agricultural machinery", "Luxury textiles"], a: 1, explain: "Korea is a hardware titan, especially in memory chips, advanced displays, and EV batteries." },
+    { q: "Korea's Value-up Programme models its strategy on which neighbour?", options: ["China", "Japan", "Singapore", "Australia"], a: 1, explain: "Korea designed its Value-up framework closely after the Tokyo Stock Exchange's governance reforms." },
+    { q: "Which global mega-trend is heavily supported by Korean components?", options: ["High-end fashion retail", "The global AI hardware revolution", "Crude oil drilling", "European real estate"], a: 1, explain: "Korea produces foundational hardware \u2014 like high-bandwidth memory chips \u2014 that powers global AI models." },
+    { q: "What is a key challenge of investing in a passive index in Korea?", options: ["It has no technology exposure", "It is highly exposed to a few dominant Chaebols", "Only foreign companies are listed", "It cannot be traded"], a: 1, explain: "Because Chaebols are so large, a broad index is concentrated in a few conglomerates \u2014 highlighting the value of active management." },
+  ],
+  "Mainland China": [
+    { q: "Mainland China is shifting its economy away from real estate toward what concept?", options: ["Heavy agricultural farming", "New productive forces", "Unregulated crypto networks", "Consumer debt expansion"], a: 1, explain: "China is moving toward \u201cnew productive forces\u201d \u2014 advanced automation, green energy, and deep tech." },
+    { q: "Which regulator granted Fidelity approval to run its wholly foreign-owned FMC business?", options: ["The Bank of China", "The China Securities Regulatory Commission (CSRC)", "The Ministry of Infrastructure", "The Shanghai Stock Exchange"], a: 1, explain: "The CSRC is the chief securities regulator responsible for granting fund management licences." },
+    { q: "Which are examples of China's prioritised \u201cnew productive forces\u201d?", options: ["Property development and brick manufacturing", "High-end automated manufacturing, green tech, digital infrastructure", "Textile exports and coal mining", "Luxury hotel construction"], a: 1, explain: "High-tech manufacturing, EVs, solar power, and digital systems form the core of China's structural upgrade." },
+    { q: "What does an independent FMC licence allow Fidelity to do in Mainland China?", options: ["Issue credit cards", "Create and distribute its own domestic mutual funds to retail investors", "Manage offshore bank accounts in Europe", "Run the local stock exchanges"], a: 1, explain: "An FMC licence lets a foreign firm build onshore mutual funds and sell them directly to retail investors." },
+    { q: "Mainland China ranks where among the world's largest economies?", options: ["1st", "2nd", "4th", "7th"], a: 1, explain: "Mainland China is the world's second-largest economy, making its market shifts globally impactful." },
+  ],
+  "Singapore": [
+    { q: "Singapore is the premier Southeast Asian hub for which wealth structure?", options: ["Agricultural Collectives", "Family Offices", "Mineral Mining Syndicates", "Real Estate Brokerages"], a: 1, explain: "An influx of international wealth has made Singapore the top regional capital for family offices and private banking." },
+    { q: "What flexible corporate fund framework fuels Singapore's asset management industry?", options: ["eMPF", "Superannuation Corporate", "Variable Capital Company (VCC)", "NISA Bond"], a: 2, explain: "The VCC structure gives managers immense flexibility to structure multi-asset portfolios." },
+    { q: "Per Fidelity's 2026 Be Invested Global Study, what share of Singapore investable assets sits in cash?", options: ["5%", "12%", "48%", "85%"], a: 2, explain: "Despite high financial literacy, Singaporeans keep roughly 48% of investable wealth liquid in cash or savings." },
+    { q: "Fidelity Singapore partners with which institution to distribute income-generating solutions?", options: ["Maybank", "BHP Billiton", "Samsung Securities", "Tokyo Stock Exchange"], a: 0, explain: "Fidelity Singapore collaborates with regional banks such as Maybank to bring tailored yield products to savers." },
+    { q: "Which two sovereign wealth funds are anchored in Singapore's ecosystem?", options: ["SSF and NPS", "GIC and Temasek", "Future Fund and ASX", "NISA and eMPF"], a: 1, explain: "GIC and Temasek are Singapore's globally renowned sovereign wealth investment entities." },
+    { q: "Why is the VCC structure popular among fund managers in Singapore?", options: ["It makes all global stocks tax-free", "It lets managers co-mingle multiple sub-funds under one corporate umbrella", "It guarantees a fixed 8.5% return", "It is mandatory for every citizen"], a: 1, explain: "The VCC offers cost-efficiency, letting distinct sub-strategies share one corporate architecture." },
+  ],
+  "Taiwan": [
+    { q: "What term describes Taiwan's protection derived from its semiconductor monopoly?", options: ["The Tech Blanket", "The Silicon Shield", "The Hardware Castle", "The Microchip Fortress"], a: 1, explain: "Taiwan's dominance in advanced chip manufacturing is widely called its geopolitical \u201cSilicon Shield\u201d." },
+    { q: "Taiwan produces roughly what share of the world's semiconductor supply?", options: ["10%", "30%", "Over 60%", "Exactly 100%"], a: 2, explain: "Taiwan accounts for over 60% of global semiconductor manufacturing capacity \u2014 critical to global supply chains." },
+    { q: "Retail investors in Taiwan show a cultural obsession with which fund category?", options: ["High-dividend ETFs", "Long-term government debt", "Gold-backed trackers", "Sustainable agriculture funds"], a: 0, explain: "Taiwan's retail market is intensely yield-oriented, with huge flows into high-dividend ETFs." },
+    { q: "Which technology wave relies on advanced microchips made almost exclusively in Taiwan?", options: ["Block-chain ledger tracking", "The global AI revolution", "Legacy analog telecoms", "Combustion-engine software"], a: 1, explain: "The overwhelming majority of the world's most advanced microchips are made in Taiwan, anchoring the AI boom." },
+    { q: "What investing practice is popular among younger Taiwanese using mobile apps?", options: ["Physical gold storage", "Fractional share trading of local and global tech giants", "Trading paper currency options", "Buying agricultural land tokens"], a: 1, explain: "Mobile-app culture lets tech-literate youth trade small fractional slices of expensive global tech stocks." },
+    { q: "If chip production halts in Taiwan, what happens to the global tech sector?", options: ["Nothing, chips are easily replicated", "A catastrophic bottleneck, as Taiwan makes most advanced AI chips", "It shifts entirely to software", "It switches to analog radio towers"], a: 1, explain: "Taiwan's near-monopoly on advanced chips means any halt cripples global hardware pipelines." },
+    { q: "What makes Taiwan's retail investors unique versus conservative savers?", options: ["They avoid the stock market", "They are tech-literate, yield-focused, and comfortable with mobile trading", "They invest only in European bonds", "They ignore stock prices"], a: 1, explain: "The typical Taiwanese retail investor is digitally savvy, tracks global tech, and chases regular dividends." },
+  ],
 };
-
-const APAC_QUIZ = [
-  { q: "Replace these with real questions about your APAC business.", options: ["Option A", "Option B", "Option C"], a: 0 },
-  { q: "Each correct answer reinforces market knowledge before peers quiz each other.", options: ["Option A", "Option B", "Option C"], a: 0 },
-];
 
 const PLACE_POOL = ["Madagascar", "Patagonia", "Iceland", "Bhutan", "Namibia", "Mongolia", "Greenland", "Petra", "Antarctica", "Easter Island"];
 
 /* ============================================================================
-   STORAGE LAYER — talks to /api (Cloudflare Pages Function over D1).
-   Probes once on first use; if /api is unreachable, uses an in-memory map so
-   the app still runs in preview (single device, non-persistent).
+   STORAGE LAYER — Supabase (PostgREST). Single shared key/value table 'kv'.
 ============================================================================ */
-const API = "/api";
-let ONLINE = true;
-let _readyP = null;
-const _mem = {};
-
-async function probe() {
-  try { const r = await fetch(API + "/ping", { cache: "no-store" }); ONLINE = r.ok; }
-  catch { ONLINE = false; }
-}
-function ensure() { if (!_readyP) _readyP = probe(); return _readyP; }
-
+const SB_HEADERS = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY, "Content-Type": "application/json" };
 async function sget(k) {
-  await ensure();
-  if (!ONLINE) { return _mem[k] !== undefined ? _mem[k] : null; }
-  try {
-    const r = await fetch(API + "/get?key=" + encodeURIComponent(k), { cache: "no-store" });
-    if (!r.ok) return null;
-    const d = await r.json();
-    return d.value != null ? JSON.parse(d.value) : null;
-  } catch { return null; }
+  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: SB_HEADERS }); const rows = await r.json(); return rows && rows.length ? rows[0].value : null; } catch { return null; }
 }
 async function sset(k, v) {
-  await ensure();
-  if (!ONLINE) { _mem[k] = v; return true; }
-  try {
-    await fetch(API + "/set", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key: k, value: JSON.stringify(v) }) });
-    return true;
-  } catch { return false; }
+  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv", { method: "POST", headers: { ...SB_HEADERS, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ key: k, value: v }) }); return r.ok; } catch { return false; }
 }
-async function slist(p) {
-  await ensure();
-  if (!ONLINE) { return Object.keys(_mem).filter((k) => k.startsWith(p)); }
-  try {
-    const r = await fetch(API + "/list?prefix=" + encodeURIComponent(p), { cache: "no-store" });
-    if (!r.ok) return [];
-    const d = await r.json();
-    return d.keys || [];
-  } catch { return []; }
+async function slist(prefix) {
+  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: SB_HEADERS }); const rows = await r.json(); return Array.isArray(rows) ? rows.map((x) => x.key) : []; } catch { return []; }
 }
 
 /* ============================================================================
@@ -190,7 +211,7 @@ async function genCode() {
 }
 
 /* ============================================================================
-   DESIGN SYSTEM
+   DESIGN SYSTEM (injected once) — passport / hanko visual identity
 ============================================================================ */
 function Styles() {
   return (
@@ -261,6 +282,11 @@ function Styles() {
       padding:12px 18px;border-radius:999px;font-weight:800;font-size:14px;z-index:60;
       box-shadow:0 8px 24px rgba(0,0,0,.3);animation:rise .3s ease}
     @keyframes rise{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+    .modal{position:fixed;inset:0;background:rgba(0,17,28,.55);display:flex;align-items:flex-end;
+      justify-content:center;z-index:50;padding:0}
+    .sheet{background:var(--paper);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:20px;
+      animation:up .25s ease;max-height:90vh;overflow:auto}
+    @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
     .opt{width:100%;text-align:left;padding:14px;border:1.5px solid var(--line);border-radius:11px;
       background:#fff;font-weight:600;font-size:15px;font-family:inherit;cursor:pointer;transition:all .15s;margin-bottom:8px}
     .opt:hover{border-color:var(--navy)}
@@ -275,12 +301,11 @@ function Styles() {
     .timer{font-family:'Space Mono',monospace;font-size:46px;font-weight:700;text-align:center}
     .link{color:var(--green);font-weight:700;cursor:pointer}
     .scrn{background:var(--navy);color:#fff;min-height:100vh;padding:32px}
-    .offline{position:fixed;top:0;left:0;right:0;background:var(--gold);color:#1a1205;text-align:center;
-      font-size:11px;font-weight:800;padding:4px;z-index:80;letter-spacing:.03em}
   `}</style>
   );
 }
 
+/* ---- Travel-themed nav icons --------------------------------------------- */
 function TabIcon({ name }) {
   const p = { width: 23, height: 23, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
   switch (name) {
@@ -297,29 +322,26 @@ function TabIcon({ name }) {
    APP ROOT
 ============================================================================ */
 function App() {
-  const [view, setView] = useState("boot");
-  const [me, setMe] = useState(null);
-  const [inbox, setInbox] = useState([]);
+  const [view, setView] = useState("boot"); // boot | landing | register | app | admin | screen
+  const [me, setMe] = useState(null);       // users:{id} record on this device
+  const [inbox, setInbox] = useState([]);   // inbound point events for me
   const [tab, setTab] = useState("passport");
   const [toast, setToast] = useState(null);
   const [flash, setFlash] = useState(null);
-  const [online, setOnline] = useState(true);
   const meRef = useRef(null);
   useEffect(() => { meRef.current = me; }, [me]);
 
   const ping = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
 
+  // boot: check URL for screen/admin mode
   useEffect(() => {
-    (async () => {
-      await ensure();
-      setOnline(ONLINE);
-      const q = (typeof window !== "undefined" ? window.location.search : "") || "";
-      if (q.includes("screen")) { setView("screen"); return; }
-      if (q.includes("admin")) { setView("admin"); return; }
-      setView("landing");
-    })();
+    const q = (typeof window !== "undefined" ? window.location.search : "") || "";
+    if (q.includes("screen")) { setView("screen"); return; }
+    if (q.includes("admin")) { setView("admin"); return; }
+    setView("landing");
   }, []);
 
+  // load my inbox + flash, recompute, persist score cache
   const refresh = useCallback(async (myRec) => {
     const rec = myRec || meRef.current;
     if (!rec) return;
@@ -329,6 +351,7 @@ function App() {
     setInbox(evs);
     const fl = await sget("flash:current");
     setFlash(fl && fl.endsAt > Date.now() ? fl : null);
+    // fold any inbound connections into my connections (for stamps + dedupe)
     let changed = false;
     const cons = [...(rec.connections || [])];
     for (const e of evs.filter((x) => x.type === "connection")) {
@@ -340,6 +363,7 @@ function App() {
     }
     let next = rec;
     if (changed) { next = { ...rec, connections: cons, triviaWith: tri }; }
+    // auto-awards: trio + full passport
     next = await applyAutoAwards(next, evs);
     setMe(next);
     if (changed || next !== rec) await sset("users:" + next.id, next);
@@ -358,24 +382,22 @@ function App() {
   const total = (me ? me.selfPoints || 0 : 0) + sum(inbox, (e) => e.points);
   const collected = me ? collectedMarkets(me) : [];
 
-  const offlineBar = !online ? <div className="offline">Preview mode — no backend reachable. Single device, not saved. Deploy with /api for live play.</div> : null;
-
-  if (view === "boot") return (<><Styles /><div className="gcq"><div className="wrap" style={{ justifyContent: "center", color: "#9fb4bd" }}>Loading…</div></div></>);
+  if (view === "boot") return <Styles />;
   if (view === "screen") return (<><Styles /><BigScreen onExit={() => setView("landing")} /></>);
   if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} /></>);
-  if (view === "landing") return (<><Styles />{offlineBar}<Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
-  if (view === "register") return (<><Styles />{offlineBar}<Register onDone={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
+  if (view === "landing") return (<><Styles /><Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
+  if (view === "register") return (<><Styles /><Register onDone={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
 
+  // ---- main app ----
   return (
     <div className="gcq">
       <Styles />
-      {offlineBar}
-      <div className="wrap" style={{ paddingTop: online ? 0 : 18 }}>
+      <div className="wrap">
         <div style={{ flex: 1, paddingTop: 16, paddingBottom: 12 }}>
           {flash && <div className="flash" style={{ marginBottom: 14 }}>⚡ {flash.title} — {flash.desc}{flash.mult > 1 ? `  (×${flash.mult} points!)` : ""}</div>}
           {tab === "passport" && <Passport me={me} total={total} inbox={inbox} collected={collected} ping={ping} setMe={setMe} refresh={refresh} />}
           {tab === "connect" && <Connect me={me} flash={flash} ping={ping} setMe={setMe} refresh={refresh} collected={collected} />}
-          {tab === "quiz" && <Trivia me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+          {tab === "quiz" && <QuizHub me={me} ping={ping} setMe={setMe} refresh={refresh} />}
           {tab === "learn" && <Learn me={me} ping={ping} setMe={setMe} refresh={refresh} />}
           {tab === "missions" && <Missions me={me} total={total} ping={ping} setMe={setMe} refresh={refresh} />}
         </div>
@@ -403,9 +425,11 @@ function collectedMarkets(me) {
 async function applyAutoAwards(rec, evs) {
   let next = rec;
   const cols = collectedMarkets(next);
+  // Trio bonus
   if (cols.length >= 3 && !next.trioAwarded) {
     next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus, missions: { ...next.missions, m_3market: true } };
   }
+  // Full passport
   if (cols.length >= MARKETS.length && !next.fullAwarded) {
     next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
   }
@@ -413,7 +437,7 @@ async function applyAutoAwards(rec, evs) {
 }
 
 /* ============================================================================
-   LANDING / SIGN-IN
+   LANDING / SIGN-IN (email recovers an existing profile = account recovery)
 ============================================================================ */
 function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
   const [email, setEmail] = useState("");
@@ -463,10 +487,10 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
 }
 
 /* ============================================================================
-   REGISTER
+   REGISTER — Icebreaker Blueprint unlocks the passport + Connect Code
 ============================================================================ */
 function Register({ onDone, onBack }) {
-  const [f, setF] = useState({ email: "", name: "", market: "", team: "", nationality: "", h1: "", h2: "", h3: "", exotic: "", goal: "", languages: "", table: "", charity: "" });
+  const [f, setF] = useState({ email: "", name: "", market: "", team: "", nationality: "", h1: "", h2: "", h3: "", exotic: "", languages: "", table: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -487,14 +511,14 @@ function Register({ onDone, onBack }) {
     const rec = {
       id, code, email: f.email.trim().toLowerCase(), name: f.name.trim(), market: f.market,
       team: f.team.trim(), nationality: f.nationality.trim(), hobbies: [f.h1.trim(), f.h2.trim(), f.h3.trim()],
-      exotic: f.exotic.trim(), goal: f.goal.trim(), languages: f.languages.trim(),
-      charity: f.charity.trim(), table: f.table.trim(), selfPoints: 0, connections: [], triviaWith: [],
-      missions: {}, japanQuiz: false, apacQuiz: false, createdAt: Date.now(),
+      exotic: f.exotic.trim(), languages: f.languages.trim(),
+      table: f.table.trim(), selfPoints: 0, connections: [], triviaWith: [],
+      missions: {}, japanQuiz: false, apacQuiz: false, apacDone: {}, createdAt: Date.now(),
     };
     await sset("users:" + id, rec);
     await sset("code:" + code, { id, name: rec.name, market: rec.market });
     await sset("email:" + rec.email, { id });
-    await sset("score:" + id, { id, name: rec.name, market: rec.market, total: 0, charity: rec.charity });
+    await sset("score:" + id, { id, name: rec.name, market: rec.market, total: 0, charity: "" });
     setBusy(false);
     onDone(rec);
   }
@@ -529,8 +553,6 @@ function Register({ onDone, onBack }) {
           <Field label="Most exotic place you've visited *"><input className="input" value={f.exotic} onChange={set("exotic")} placeholder="Madagascar" /></Field>
           <Field label="Languages you speak"><input className="input" value={f.languages} onChange={set("languages")} placeholder="English, Japanese" /></Field>
           <Field label="Day 1 table number"><input className="input" value={f.table} onChange={set("table")} placeholder="e.g. 12" inputMode="numeric" /></Field>
-          <Field label="My Tokyo goal"><input className="input" value={f.goal} onChange={set("goal")} placeholder="Mastering the perfect bow" /></Field>
-          <Field label="A charity I'd nominate if I win"><input className="input" value={f.charity} onChange={set("charity")} placeholder="e.g. Médecins Sans Frontières" /></Field>
           {err && <p style={{ color: "var(--seal)", fontSize: 13, fontWeight: 600 }}>{err}</p>}
           <button className="btn btn-primary" style={{ marginTop: 6 }} onClick={submit} disabled={busy || !ready}>
             {busy ? "Creating passport…" : "Unlock my Connect Code"}
@@ -554,8 +576,8 @@ function StampSVG({ market, idx, color }) {
   const code = codeFor(market);
   const shape = idx % 4;
   const glyph = GLYPHS[idx % GLYPHS.length];
-  const ring = (sw) => {
-    const r1 = 44, r2 = 36;
+  const ring = (sw, scale) => {
+    const r1 = 44 * scale, r2 = 36 * scale;
     if (shape === 0) return (<><circle cx="50" cy="50" r={r1} fill="none" stroke={color} strokeWidth={sw} /><circle cx="50" cy="50" r={r2} fill="none" stroke={color} strokeWidth={sw * 0.7} /></>);
     if (shape === 1) { const a = 50 - r1, b = 2 * r1, c = 50 - r2, d = 2 * r2; return (<><rect x={a} y={a} width={b} height={b} rx="14" fill="none" stroke={color} strokeWidth={sw} /><rect x={c} y={c} width={d} height={d} rx="10" fill="none" stroke={color} strokeWidth={sw * 0.7} /></>); }
     if (shape === 2) return (<><ellipse cx="50" cy="50" rx={r1} ry={r1 * 0.8} fill="none" stroke={color} strokeWidth={sw} /><ellipse cx="50" cy="50" rx={r2} ry={r2 * 0.8} fill="none" stroke={color} strokeWidth={sw * 0.7} /></>);
@@ -564,7 +586,7 @@ function StampSVG({ market, idx, color }) {
   return (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <g style={{ opacity: 0.92 }}>
-        {ring(2.6)}
+        {ring(2.6, 1)}
         <text x="50" y="30" textAnchor="middle" fontSize="11" fill={color}>{glyph}</text>
         <text x="50" y="60" textAnchor="middle" fontSize="23" fontWeight="700" fill={color} fontFamily="'Space Mono',monospace" letterSpacing="1">{code}</text>
         <text x="50" y="76" textAnchor="middle" fontSize="8" fill={color} fontFamily="'Space Mono',monospace" letterSpacing="1.5">TOKYO &#8217;26</text>
@@ -582,7 +604,7 @@ function LockedSVG({ market }) {
   );
 }
 function Stamp({ market, idx, on }) {
-  const rot = ((idx * 37) % 19) - 9;
+  const rot = ((idx * 37) % 19) - 9; // deterministic tilt -9..+9
   const color = INK[idx % INK.length];
   return (
     <div className={"stmpwrap" + (on ? " got" : "")}>
@@ -617,7 +639,7 @@ function travelLabel(n) {
 }
 
 /* ============================================================================
-   PASSPORT
+   PASSPORT (dashboard)
 ============================================================================ */
 function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
   const rank = rankFor(total);
@@ -677,20 +699,12 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
           </div>
         </div>
       )}
-
-      {me.charity && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <div className="eyebrow" style={{ color: "var(--navy)" }}>Playing for</div>
-          <p style={{ fontWeight: 700, marginTop: 4 }}>{me.charity}</p>
-          <p className="muted" style={{ fontSize: 12 }}>The overall winner directs the charity pot to their nominated cause.</p>
-        </div>
-      )}
     </div>
   );
 }
 
 /* ============================================================================
-   CONNECT
+   CONNECT — enter a peer's code (4-digit). Both sides score, once per person.
 ============================================================================ */
 function Connect({ me, flash, ping, setMe, refresh, collected }) {
   const [code, setCode] = useState("");
@@ -711,6 +725,7 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
     let earned = PTS.connect + (isNewMarket ? PTS.newMarket : 0);
     earned = earned * mult;
 
+    // credit me (initiator)
     const next = {
       ...me,
       selfPoints: (me.selfPoints || 0) + earned,
@@ -718,6 +733,7 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
       missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
     };
     setMe(next); await sset("users:" + me.id, next);
+    // credit peer via their inbox (unique key, concurrency-safe)
     const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
     await sset("inbox:" + idx.id + ":" + ev.id, ev);
     setBusy(false); setCode("");
@@ -780,10 +796,34 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
 }
 
 /* ============================================================================
-   TRIVIA
+   TRIVIA — host generates a 3-question quiz from their blueprint, peer answers
+============================================================================ */
+/* ============================================================================
+   QUIZ HUB — three quiz types: About me · Japanese culture · APAC markets
+============================================================================ */
+function QuizHub({ me, ping, setMe, refresh }) {
+  const [kind, setKind] = useState("me");
+  return (
+    <div>
+      <div className="eyebrow">Quizzes</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Test &amp; be tested</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
+        {[["me", "About me"], ["japan", "Japan culture"], ["apac", "APAC markets"]].map(([k, l]) => (
+          <button key={k} className={"btn " + (kind === k ? "btn-navy" : "btn-ghost")} style={{ fontSize: 12.5, padding: "11px 6px", minHeight: 46, lineHeight: 1.15 }} onClick={() => setKind(k)}>{l}</button>
+        ))}
+      </div>
+      {kind === "me" && <Trivia me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+      {kind === "japan" && (<div><p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>Test your Japan etiquette before you land. +10 per correct answer, once.</p><JapanQuiz me={me} ping={ping} setMe={setMe} refresh={refresh} /></div>)}
+      {kind === "apac" && (<div><p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>Learn each market, one quiz at a time — explanations included.</p><ApacQuiz me={me} ping={ping} setMe={setMe} refresh={refresh} /></div>)}
+    </div>
+  );
+}
+
+/* ============================================================================
+   PEER POP QUIZ ("About me") — host builds a quiz, peer answers, 60s timer
 ============================================================================ */
 function Trivia({ me, ping, setMe, refresh }) {
-  const [stage, setStage] = useState("intro");
+  const [stage, setStage] = useState("intro"); // intro | code | run | done
   const [peer, setPeer] = useState(null);
   const [code, setCode] = useState("");
   const [qs, setQs] = useState([]);
@@ -910,27 +950,26 @@ function Trivia({ me, ping, setMe, refresh }) {
     </div>
   );
 }
-function shuffle(a) { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; }
+function shuffle(a) { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[x[i], x[j]] = [x[j], x[i]]; } return x; }
 function pickN(a, n) { return shuffle(a).slice(0, n); }
 
 /* ============================================================================
-   LEARN
+   LEARN — Icebreakers (dinner) · Japan etiquette + quiz · APAC facts + quiz
 ============================================================================ */
 function Learn({ me, ping, setMe, refresh }) {
   const [sub, setSub] = useState("ice");
   return (
     <div>
-      <div className="eyebrow">Learn & prepare</div>
+      <div className="eyebrow">Learn &amp; prepare</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Study up</h2>
       <div className="grid2" style={{ marginBottom: 12 }}>
-        {[["ice", "Dinner icebreakers"], ["japan", "Did You Know? Japan"], ["apac", "APAC fast facts"], ["jq", "Take the quizzes"]].map(([k, l]) => (
+        {[["ice", "Dinner icebreakers"], ["japan", "Japan etiquette"]].map(([k, l]) => (
           <button key={k} className={"btn " + (sub === k ? "btn-navy" : "btn-ghost")} style={{ fontSize: 13, padding: "11px 8px" }} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
       {sub === "ice" && <Icebreakers />}
       {sub === "japan" && <JapanFacts />}
-      {sub === "apac" && <ApacFacts />}
-      {sub === "jq" && <Quizzes me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+      <p className="muted" style={{ fontSize: 12, marginTop: 12, color: "#9fb4bd" }}>Looking for the Japan and APAC quizzes? They're now under the Quiz tab.</p>
     </div>
   );
 }
@@ -960,72 +999,110 @@ function JapanFacts() {
     </div>
   );
 }
-function ApacFacts() {
-  return (
-    <div>
-      <div className="card" style={{ marginBottom: 10, borderColor: "var(--gold)" }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)" }}>⚠ Placeholder content — replace APAC_FACTS in the code with your real market data before the event.</p>
-      </div>
-      {Object.entries(APAC_FACTS).map(([m, facts]) => (
-        <div className="card" key={m} style={{ marginBottom: 10 }}>
-          <div className="pill" style={{ marginBottom: 8 }}>{m}</div>
-          {facts.map((x, i) => <p key={i} style={{ fontSize: 14, marginBottom: 4 }}>• {x}</p>)}
-        </div>
-      ))}
-    </div>
-  );
-}
-function Quizzes({ me, ping, setMe, refresh }) {
-  return (
-    <div>
-      <SelfQuiz title="Did You Know? Japan" questions={JAPAN_QUIZ} done={me.japanQuiz}
-        onComplete={async (score) => {
-          const pts = score * 20;
-          const next = { ...me, japanQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_learn: true } };
-          setMe(next); await sset("users:" + me.id, next); ping(`+${pts} from the Japan quiz`); refresh(next);
-        }} ping={ping} />
-      <SelfQuiz title="APAC Fast Facts" questions={APAC_QUIZ} done={me.apacQuiz}
-        onComplete={async (score) => {
-          const pts = score * 20;
-          const next = { ...me, apacQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_apac: true } };
-          setMe(next); await sset("users:" + me.id, next); ping(`+${pts} from the APAC quiz`); refresh(next);
-        }} ping={ping} />
-    </div>
-  );
-}
-function SelfQuiz({ title, questions, done, onComplete, ping }) {
-  const [open, setOpen] = useState(false);
+// Shared quiz runner with explanation reveal + Next
+function QuizRunner({ questions, onFinish }) {
   const [qi, setQi] = useState(0);
-  const [score, setScore] = useState(0);
   const [picked, setPicked] = useState(null);
-  function answer(i) {
+  const [correct, setCorrect] = useState(0);
+  const q = questions[qi];
+  function pick(i) {
     if (picked !== null) return;
     setPicked(i);
-    const ok = i === questions[qi].a;
-    const ns = score + (ok ? 1 : 0);
-    if (ok) setScore(ns);
-    setTimeout(() => {
-      setPicked(null);
-      if (qi + 1 < questions.length) setQi(qi + 1);
-      else { onComplete(ns); setOpen(false); setQi(0); setScore(0); }
-    }, 800);
+    if (i === q.a) setCorrect((c) => c + 1);
+  }
+  function next() {
+    const last = qi + 1 >= questions.length;
+    const finalCorrect = correct;
+    if (last) { onFinish(finalCorrect); return; }
+    setQi(qi + 1); setPicked(null);
   }
   return (
-    <div className="card" style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <p style={{ fontWeight: 800 }}>{title}</p>
-        {done ? <span className="pill" style={{ background: "#e9f7f0", color: "var(--green)" }}>Completed ✓</span>
-          : <button className="btn btn-primary" style={{ width: "auto", padding: "8px 14px", fontSize: 13 }} onClick={() => setOpen(true)}>Start</button>}
-      </div>
-      {open && (
-        <div style={{ marginTop: 12 }}>
-          <div className="eyebrow" style={{ color: "var(--navy)" }}>Question {qi + 1}/{questions.length}</div>
-          <p style={{ fontWeight: 700, margin: "8px 0 10px" }}>{questions[qi].q}</p>
-          {questions[qi].options.map((o, i) => (
-            <button key={i} className={"opt" + (picked !== null && i === questions[qi].a ? " correct" : picked === i ? " wrong" : "")} onClick={() => answer(i)}>{o}</button>
-          ))}
+    <div>
+      <div className="eyebrow" style={{ color: "var(--navy)" }}>Question {qi + 1} / {questions.length}</div>
+      <p style={{ fontWeight: 800, fontSize: 16, margin: "8px 0 12px", lineHeight: 1.35 }}>{q.q}</p>
+      {q.options.map((o, i) => (
+        <button key={i} disabled={picked !== null}
+          className={"opt" + (picked !== null && i === q.a ? " correct" : picked === i && i !== q.a ? " wrong" : "")}
+          onClick={() => pick(i)}>{o}</button>
+      ))}
+      {picked !== null && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ background: "var(--paper2)", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.4 }}>
+            <b style={{ color: picked === q.a ? "var(--green)" : "var(--seal)" }}>{picked === q.a ? "Correct" : "Not quite"} — </b>{q.explain}
+          </div>
+          <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={next}>{qi + 1 >= questions.length ? "Finish" : "Next question"}</button>
         </div>
       )}
+    </div>
+  );
+}
+
+function JapanQuiz({ me, ping, setMe, refresh }) {
+  const [open, setOpen] = useState(false);
+  async function finish(correct) {
+    setOpen(false);
+    if (me.japanQuiz) { ping("Already completed"); return; }
+    const pts = correct * 10;
+    const next = { ...me, japanQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_learn: true } };
+    setMe(next); await sset("users:" + me.id, next); ping(`+${pts} — ${correct}/${JAPAN_QUIZ.length} on the Japan quiz`); refresh(next);
+  }
+  return (
+    <div className="card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: open ? 12 : 0 }}>
+        <div>
+          <p style={{ fontWeight: 800 }}>Japan etiquette quiz</p>
+          <p className="muted" style={{ fontSize: 12 }}>{JAPAN_QUIZ.length} questions · +10 each correct</p>
+        </div>
+        {me.japanQuiz ? <span className="pill" style={{ background: "#e9f7f0", color: "var(--green)" }}>Completed ✓</span>
+          : !open && <button className="btn btn-primary" style={{ width: "auto", padding: "9px 16px", fontSize: 13 }} onClick={() => setOpen(true)}>Start</button>}
+      </div>
+      {open && <QuizRunner questions={JAPAN_QUIZ} onFinish={finish} />}
+    </div>
+  );
+}
+
+function ApacQuiz({ me, ping, setMe, refresh }) {
+  const markets = Object.keys(APAC_QUIZ);
+  const [active, setActive] = useState(null);
+  const done = me.apacDone || {};
+  const doneCount = markets.filter((m) => done[m]).length;
+
+  async function finish(market, correct) {
+    setActive(null);
+    if (done[market]) { ping("Already completed " + market); return; }
+    const pts = correct * 5;
+    const nextDone = { ...done, [market]: true };
+    const next = { ...me, apacDone: nextDone, apacQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_apac: true } };
+    setMe(next); await sset("users:" + me.id, next); ping(`+${pts} — ${correct}/${APAC_QUIZ[market].length} on ${market}`); refresh(next);
+  }
+
+  if (active) {
+    return (
+      <div className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <span className="pill">{active}</span>
+          <span className="link muted" style={{ fontSize: 13 }} onClick={() => setActive(null)}>Back</span>
+        </div>
+        <QuizRunner questions={APAC_QUIZ[active]} onFinish={(c) => finish(active, c)} />
+      </div>
+    );
+  }
+  return (
+    <div className="card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Pick a market</div>
+        <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>{doneCount}/{markets.length} done</span>
+      </div>
+      <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Learn each market before peers quiz you. +5 per correct answer, once per market.</p>
+      <div style={{ display: "grid", gap: 8 }}>
+        {markets.map((m) => (
+          <button key={m} className="opt" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }} onClick={() => setActive(m)}>
+            <span>{m}</span>
+            {done[m] ? <span style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>✓ Done</span>
+              : <span className="muted" style={{ fontSize: 12 }}>{APAC_QUIZ[m].length} Q →</span>}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1036,7 +1113,7 @@ function SelfQuiz({ title, questions, done, onComplete, ping }) {
 function Missions({ me, total, ping, setMe, refresh }) {
   const doneCount = MISSIONS.filter((m) => me.missions && me.missions[m.id]).length;
   async function toggle(m) {
-    if (me.missions && me.missions[m.id]) return;
+    if (me.missions && me.missions[m.id]) return; // one-way; awarded once
     if (m.auto) { ping("This one completes automatically when you do it in the app."); return; }
     const next = { ...me, selfPoints: (me.selfPoints || 0) + m.pts, missions: { ...me.missions, [m.id]: true } };
     setMe(next); await sset("users:" + me.id, next); ping(`+${m.pts} — ${m.label}`); refresh(next);
@@ -1168,6 +1245,7 @@ function AdminPanel({ onExit }) {
   async function adjust(u, delta) {
     const next = { ...u, selfPoints: (u.selfPoints || 0) + delta };
     await sset("users:" + u.id, next);
+    // recompute that user's leaderboard cache from their inbox too
     const ik = await slist("inbox:" + u.id + ":"); let inb = 0;
     for (const k of ik) { const e = await sget(k); if (e) inb += e.points; }
     await sset("score:" + u.id, { id: u.id, name: u.name, market: u.market, total: (next.selfPoints || 0) + inb, charity: u.charity || "" });
@@ -1268,7 +1346,22 @@ function AdminPanel({ onExit }) {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+function SetupNotice() {
+  return (
+    <div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}>
+      <Styles />
+      <div className="card">
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Setup needed</div>
+        <h2 className="h2" style={{ marginTop: 6 }}>Add your Supabase keys</h2>
+        <p style={{ fontSize: 14, marginTop: 8 }}>Open this HTML file in a text editor and replace <b>SUPABASE_URL</b> and <b>SUPABASE_ANON_KEY</b> near the top with the values from your Supabase project (Project Settings -> API). Run the SQL setup script once, re-save, and re-host.</p>
+      </div>
+    </div></div>
+  );
+}
+
+const _root = ReactDOM.createRoot(document.getElementById("root"));
+_root.render(CONFIGURED ? <App /> : <SetupNotice />);
 </script>
 </body>
 </html>
