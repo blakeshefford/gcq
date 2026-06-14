@@ -1,31 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>The Global Connection Quest</title>
+<html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" /><title>The Global Connection Quest</title>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
-<style>html,body{margin:0;height:100%;background:#00314a}#root{min-height:100%}</style>
-</head>
-<body>
-<div id="root"></div>
+<style>html,body{margin:0;height:100%;background:#00314a}#root{min-height:100%}</style></head>
+<body><div id="root"></div>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
-
 const SUPABASE_URL = "https://ytfvaoddykoqfhpyqzcj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_k810-xD8BHBDuPOBjx3eoA_9mgymeWR";
 const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KEY);
+/* ============================================================================
+   GLOBAL CONNECTION QUEST — Fidelity International Leadership Conference, Tokyo
+   Single-file production React app. Backend = artifact shared storage
+   (cross-device, concurrency-safe: every write owns a unique key).
+   ----------------------------------------------------------------------------
+   EDIT THESE CONSTANTS to finalise: MARKETS, content packs, scoring, admin PIN.
+============================================================================ */
 
+// ---- CONFIG: replace with your real attending markets ----------------------
 const MARKETS = [
   "Australia", "Bermuda", "Canada", "France", "Hong Kong", "Italy",
   "Japan", "Korea", "Luxembourg", "Mainland China", "Singapore", "Spain",
   "Taiwan", "United Kingdom", "United States", "Other",
 ];
 
-const ADMIN_PIN = "tokyo2026";
+const ADMIN_PIN = "tokyo2026"; // change before the event
 
+// 3-letter codes shown on each passport stamp
 const CODES = {
   "Australia": "AUS", "Bermuda": "BMU", "Canada": "CAN", "France": "FRA",
   "Hong Kong": "HKG", "Italy": "ITA", "Japan": "JPN", "Korea": "KOR",
@@ -36,16 +38,18 @@ const codeFor = (m) => CODES[m] || m.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpp
 const INK = ["#c8102e", "#00314a", "#0a6b7c", "#a9791f", "#7a2e57", "#1f7a44"];
 const GLYPHS = ["\u2736", "\u2756", "\u2737", "\u25C6", "\u2742", "\u273F"];
 
+// ---- Scoring (tune as you like) --------------------------------------------
 const PTS = {
-  connect: 20,
-  newMarket: 30,
-  triviaCorrect: 50,
-  triviaHost: 20,
-  trioBonus: 150,
-  fullPassport: 300,
-  table: 75,
+  connect: 20,        // each new person you meet (both sides earn)
+  newMarket: 30,      // bonus when that person unlocks a new market stamp
+  triviaCorrect: 50,  // per correct answer, to the quizzer (you)
+  triviaSubject: 10,  // to the person you got quizzed on, for the connection
+  trioBonus: 150,     // meet 3 different markets
+  fullPassport: 300,  // collect every market
+  table: 75,          // table challenge complete
 };
 
+// ---- Levels ----------------------------------------------------------------
 const RANKS = [
   { min: 0, name: "Newcomer" },
   { min: 150, name: "Connector" },
@@ -54,30 +58,59 @@ const RANKS = [
   { min: 1500, name: "Global Citizen" },
 ];
 
+// ---- Missions (honour-system + auto-complete) ------------------------------
 const MISSIONS = [
   { id: "m_code", label: "Enter a peer's 4-digit Connect Code", pts: 15, auto: "firstConnect" },
   { id: "m_coffee", label: "Meet a new market peer during the morning coffee break", pts: 10 },
   { id: "m_trivia", label: "Run a Pop Quiz with someone new", pts: 20, auto: "firstTrivia" },
-  { id: "m_bow", label: "Practise a proper Japanese bow with a colleague", pts: 15 },
-  { id: "m_meishi", label: "Exchange a business card the Japanese way (two hands)", pts: 15 },
   { id: "m_3market", label: "Collect stamps from 3 different markets", pts: 25, auto: "trio" },
-  { id: "m_learn", label: "Complete the 'Did You Know? Japan' quiz", pts: 20, auto: "japanQuiz" },
-  { id: "m_apac", label: "Complete the APAC Fast Facts quiz", pts: 20, auto: "apacQuiz" },
+  { id: "m_learn", label: "Complete a Japan culture challenge with a colleague", pts: 20, auto: "culture" },
+  { id: "m_apac", label: "Earn full points on any market quiz", pts: 20, auto: "apacQuiz" },
 ];
 
+// ---- Dinner icebreakers (leadership-tuned) ---------------------------------
 const ICEBREAKERS = [
-  "What is a business risk you took this year that failed — and what did you learn?",
+  "If you could have any superpower for exactly 24 hours, what would it be?",
+  "If you were forced to open a themed restaurant, what would the theme be?",
+  "What was your most unusual job?",
+  "Are you a \"clear your inbox every day\" person or a \"1,500 unread emails\" person?",
+  "What is one productivity tool or app you couldn't live without?",
+  "If you could instantly expert-level master any professional skill, what would it be?",
+  "Would you rather live without music for a year or without television for a year?",
+  "What is something you're looking forward to in the next year?",
+  "What's the most adventurous thing you've ever done?",
+  "If you could see a statistic line above everyone's head, what stat would you want to see? (e.g., happiness level, how many dogs they've petted, etc.)",
+  "What's a small ritual that keeps you grounded when things get noisy?",
   "Which market outside your own are you most curious about, and why?",
-  "What's one leadership habit you've changed your mind about in the last five years?",
-  "Describe a moment a customer taught you something your strategy hadn't.",
-  "What's a decision you're proud of that nobody noticed at the time?",
-  "If you could borrow one strength from a colleague at this table, what would it be?",
+  "If you could borrow one strength from anyone, what would it be?",
   "What does 'good' look like for your team twelve months from now?",
   "What's the best piece of advice you've received from someone more junior than you?",
-  "Which part of the business would you most like to spend a week inside?",
-  "What's a small ritual that keeps you grounded when things get noisy?",
 ];
 
+const HANDS = [
+  "Walking into a crowded room where you don't know anyone.",
+  "Spending a completely open weekend with absolutely zero plans.",
+  "Solving a tricky, unexpected problem right under pressure.",
+  "Sitting quietly on a beach listening to the waves.",
+  "Booking a last-minute trip with absolutely no itinerary.",
+  "Checking off every single item on a long to-do list.",
+  "Attending a loud, crowded live gig or sporting event.",
+  "Putting on headphones and hyper-focussing on a solo project.",
+  "Collaborating with a team to bounce ideas back and forth.",
+  "Staying in a rustic, cosy cabin during a thunderstorm.",
+  "Being the centre of attention or presenting to a group.",
+  "Organising a messy spreadsheet, cupboard, or physical space.",
+  "Winning a highly competitive board game or pub trivia night.",
+  "Spending a rainy afternoon reading a book or watching a film alone.",
+  "Walking through a bustling, high-energy city centre.",
+  "Diving deep down a random internet research rabbit hole for hours.",
+  "Having a long, deep, one-on-one conversation.",
+  "Cooking a complex, experimental meal without a recipe.",
+  "Waking up early in the morning before the rest of the world is awake.",
+  "Powering through a rigorous, high-intensity workout.",
+];
+
+// ---- Did You Know? Japan (true general etiquette/culture) -------------------
 const JAPAN_FACTS = [
   { t: "The bow (お辞儀)", d: "A slight bow (about 15°) is a casual greeting; a deeper 30–45° bow shows respect or thanks. Keep your back straight and eyes lowered." },
   { t: "Business cards (名刺 meishi)", d: "Offer and receive cards with both hands, card facing the recipient. Read it carefully before setting it down — never stuff it straight into a pocket." },
@@ -89,12 +122,37 @@ const JAPAN_FACTS = [
   { t: "Giving & receiving", d: "Hand over and accept items — gifts, cards, payment — with both hands and a slight bow. Presentation matters as much as the gift." },
 ];
 
+const PHRASES = [
+  { jp: "はじめまして", romaji: "Hajimemashite", en: "Pleased to meet you", note: "The standard opener the first time you meet someone." },
+  { jp: "よろしくお願いします", romaji: "Yoroshiku onegaishimasu", en: "I look forward to working with you", note: "Said after introductions — hard to translate exactly, but essential business etiquette." },
+  { jp: "ありがとうございます", romaji: "Arigatō gozaimasu", en: "Thank you (polite)", note: "Drop the 'gozaimasu' for a more casual 'thanks'." },
+  { jp: "すみません", romaji: "Sumimasen", en: "Excuse me / sorry", note: "Doubles as 'excuse me' to get attention and a light apology." },
+  { jp: "お願いします", romaji: "Onegaishimasu", en: "Please", note: "Use when asking for something or ordering." },
+  { jp: "乾杯", romaji: "Kanpai!", en: "Cheers!", note: "Raise your glass and say it before the first sip — never start drinking first." },
+  { jp: "いただきます", romaji: "Itadakimasu", en: "I gratefully receive", note: "Said before eating, a little like 'bon appétit'." },
+  { jp: "ごちそうさまでした", romaji: "Gochisōsama deshita", en: "Thank you for the meal", note: "Said after finishing a meal." },
+  { jp: "おいしい！", romaji: "Oishii!", en: "Delicious!", note: "A welcome compliment to any host or chef." },
+  { jp: "英語を話せますか？", romaji: "Eigo o hanasemasu ka?", en: "Do you speak English?", note: "Handy when you're out exploring the city." },
+  { jp: "おはようございます / こんにちは / こんばんは", romaji: "Ohayō / Konnichiwa / Konbanwa", en: "Good morning / hello / good evening", note: "Greetings by time of day." },
+  { jp: "失礼します", romaji: "Shitsurei shimasu", en: "Excuse me (on leaving)", note: "Polite way to excuse yourself when entering or leaving a room." },
+];
+
 const JAPAN_QUIZ = [
   { q: "How should you hand over a business card?", options: ["One hand, quickly", "Both hands, card facing them", "Slide it across the table"], a: 1, explain: "Offer and receive meishi with both hands, card facing the recipient, and read it before setting it down." },
   { q: "What should you NOT do with chopsticks?", options: ["Rest them on a holder", "Stand them upright in rice", "Use them to eat noodles"], a: 1, explain: "Standing chopsticks upright in rice echoes funeral rites — always rest them on the holder." },
   { q: "Is tipping expected in Japan?", options: ["Yes, 10–15%", "No, it's not customary", "Only in taxis"], a: 1, explain: "Tipping isn't customary and can cause confusion. Excellent service is simply the standard." },
 ];
 
+// ---- Peer-verified Japan culture challenges (done together, code-confirmed) -
+const CULTURE = [
+  { id: "bow", t: "The bow", d: "Greet a new contact with a proper bow — about 15°, back straight, eyes lowered.", pts: 15 },
+  { id: "meishi", t: "Meishi exchange", d: "Swap business cards two-handed, card facing them, and read theirs before pocketing it.", pts: 15 },
+  { id: "phrase", t: "Say it in Japanese", d: "Teach each other one phrase. Try \u201cHajimemashite\u201d (pleased to meet you).", pts: 15 },
+  { id: "kanpai", t: "Kanpai!", d: "Share a drink with someone new and say \u201cKanpai!\u201d together before the first sip.", pts: 10 },
+  { id: "itadakimasu", t: "Itadakimasu", d: "Before eating together, say \u201cItadakimasu\u201d to give thanks for the meal.", pts: 10 },
+];
+
+// ---- APAC business quiz, by market (explanations double as the fast facts) --
 const APAC_QUIZ = {
   "Australia": [
     { q: "What is the local name for the mandatory retirement savings system in Australia?", options: ["401(k)", "Superannuation", "Mandatory Provident Fund", "National Pension Scheme"], a: 1, explain: "Australia's mandatory retirement saving structure is universally known as \u201cSuperannuation\u201d or \u201cSuper\u201d." },
@@ -160,52 +218,16 @@ const APAC_QUIZ = {
 const PLACE_POOL = ["Madagascar", "Patagonia", "Iceland", "Bhutan", "Namibia", "Mongolia", "Greenland", "Petra", "Antarctica", "Easter Island"];
 
 /* ============================================================================
-   STORAGE LAYER — Supabase (PostgREST)
+   STORAGE LAYER — Supabase (PostgREST). Single shared key/value table 'kv'.
 ============================================================================ */
 const SB_KEY = SUPABASE_ANON_KEY;
-function sbHeaders(extra) {
-  const h = { apikey: SB_KEY, "Content-Type": "application/json" };
-  if (/^eyJ/.test(SB_KEY)) h.Authorization = "Bearer " + SB_KEY;
-  return extra ? { ...h, ...extra } : h;
-}
-// Resilient fetch: retries transient failures (network errors, 429, 5xx) with
-// backoff so a write/read isn't silently lost during traffic spikes. Permanent
-// errors (4xx other than 429) are returned as-is — retrying won't help them.
-const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-async function sbFetch(path, opts) {
-  let lastErr = null;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    try {
-      const r = await fetch(SUPABASE_URL + path, opts);
-      if (r.ok) return r;
-      // Retry only on rate limit / server errors; give up on other 4xx.
-      if (r.status === 429 || r.status >= 500) { lastErr = r; await sleep(400 * (attempt + 1)); continue; }
-      return r;
-    } catch (e) { lastErr = e; await sleep(400 * (attempt + 1)); }
-  }
-  if (lastErr instanceof Response) return lastErr;
-  throw lastErr || new Error("request failed");
-}
-async function sget(k) {
-  try { const r = await sbFetch("/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: sbHeaders() }); const rows = await r.json(); return rows && rows.length ? rows[0].value : null; } catch { return null; }
-}
-async function sset(k, v) {
-  try { const r = await sbFetch("/rest/v1/kv", { method: "POST", headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify({ key: k, value: v }) }); return r.ok; } catch { return false; }
-}
-async function slist(prefix) {
-  try { const r = await sbFetch("/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() }); const rows = await r.json(); return Array.isArray(rows) ? rows.map((x) => x.key) : []; } catch { return []; }
-}
-// Bulk fetch: returns all values for keys matching prefix in a single query
-async function sgetAll(prefix) {
-  try {
-    const r = await sbFetch(
-      "/rest/v1/kv?select=value&key=like." + encodeURIComponent(prefix) + "*",
-      { headers: sbHeaders() }
-    );
-    const rows = await r.json();
-    return Array.isArray(rows) ? rows.map((x) => x.value).filter(Boolean) : [];
-  } catch { return []; }
-}
+function sbHeaders(extra){const h={apikey:SB_KEY,"Content-Type":"application/json"};if(/^eyJ/.test(SB_KEY))h.Authorization="Bearer "+SB_KEY;return extra?{...h,...extra}:h;}
+const sleep=(ms)=>new Promise((res)=>setTimeout(res,ms));
+async function sbFetch(path,opts){let lastErr=null;for(let a=0;a<4;a++){try{const r=await fetch(SUPABASE_URL+path,opts);if(r.ok)return r;if(r.status===429||r.status>=500){lastErr=r;await sleep(400*(a+1));continue;}return r;}catch(e){lastErr=e;await sleep(400*(a+1));}}if(lastErr instanceof Response)return lastErr;throw lastErr||new Error("request failed");}
+async function sget(k){try{const r=await sbFetch("/rest/v1/kv?select=value&key=eq."+encodeURIComponent(k),{headers:sbHeaders()});const rows=await r.json();return rows&&rows.length?rows[0].value:null;}catch{return null;}}
+async function sset(k,v){try{const r=await sbFetch("/rest/v1/kv",{method:"POST",headers:sbHeaders({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key:k,value:v})});return r.ok;}catch{return false;}}
+async function slist(prefix){try{const r=await sbFetch("/rest/v1/kv?select=key&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();return Array.isArray(rows)?rows.map(x=>x.key):[];}catch{return [];}}
+async function sgetAll(prefix){try{const r=await sbFetch("/rest/v1/kv?select=value&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();return Array.isArray(rows)?rows.map(x=>x.value).filter(Boolean):[];}catch{return [];}}
 
 /* ============================================================================
    HELPERS
@@ -225,21 +247,28 @@ async function genCode() {
 }
 
 /* ============================================================================
-   DESIGN SYSTEM
+   DESIGN SYSTEM (injected once) — passport / hanko visual identity
 ============================================================================ */
 function Styles() {
   return (
     <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
     :root{
-      --navy:#00314a; --navy2:#002233; --ink:#0b1f2a;
-      --paper:#f4efe4; --paper2:#ece3d0; --line:#d8cdb4;
-      --seal:#c8102e; --green:#00945e; --gold:#b8893b; --muted:#5e6f78;
+      --navy:#00314a; --navy2:#002233; --ink:#1b2c36;
+      --paper:#f4f6f8; --paper2:#e7edf1; --line:#dbe2e8;
+      --seal:#d2304a; --green:#0073b9; --gold:#4ea3d6; --muted:#5e6f78;
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     .gcq{font-family:'Zen Kaku Gothic New',ui-sans-serif,system-ui,sans-serif;color:var(--ink);
-      background:var(--navy);min-height:100vh;line-height:1.45}
+      background:var(--navy);min-height:100vh;line-height:1.45;overflow-x:hidden}
     .mono{font-family:'Space Mono',ui-monospace,monospace}
+    .credit{text-align:center;font-size:12px;color:#7d97a3;padding:22px 0 12px;margin-top:6px}
+    .credit a{color:#9fb4bd;text-decoration:underline;font-weight:700}
+    .codebar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      background:var(--navy2);border:1px solid rgba(255,255,255,.12);border-radius:12px;
+      padding:9px 14px;margin-bottom:14px}
+    .codebar-lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:#9fb4bd}
+    .codebar-val{font-weight:700;font-size:20px;letter-spacing:.22em;color:#fff}
     .wrap{max-width:480px;margin:0 auto;padding:0 16px;min-height:100vh;display:flex;flex-direction:column}
     .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--gold)}
     .h1{font-size:26px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
@@ -265,15 +294,15 @@ function Styles() {
     .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
       font-size:12px;font-weight:700;background:var(--paper2);color:var(--navy)}
     .progress{height:10px;background:var(--paper2);border-radius:999px;overflow:hidden}
-    .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--green),#37c08a);
+    .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--green),#46a6df);
       border-radius:999px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
     .codeband{font-family:'Space Mono',monospace;letter-spacing:.35em;font-size:34px;font-weight:700;
-      color:var(--navy);background:repeating-linear-gradient(90deg,#fff,#fff 2px,#f6f1e6 2px,#f6f1e6 4px);
+      color:var(--navy);background:repeating-linear-gradient(90deg,#fff,#fff 2px,#eef2f6 2px,#eef2f6 4px);
       border:1.5px dashed var(--line);border-radius:10px;padding:14px 10px;text-align:center}
-    .stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 8px}
-    .stmpwrap{display:flex;flex-direction:column;align-items:center;gap:5px}
+    .stamps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 8px}
+    .stmpwrap{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
     .stmp{position:relative;width:100%;aspect-ratio:1;border-radius:14px;overflow:hidden;
-      background:radial-gradient(circle at 32% 26%,#fffdf8,#f1e9d6);border:1px solid var(--line);
+      background:radial-gradient(circle at 32% 26%,#ffffff,#e9edf2);border:1px solid var(--line);
       transition:box-shadow .3s ease,transform .2s ease}
     .stmp.on{box-shadow:inset 0 0 16px rgba(0,0,0,.05)}
     .stmp.on:active{transform:scale(.93)}
@@ -284,6 +313,7 @@ function Styles() {
       letter-spacing:.01em;min-height:22px}
     .stmpwrap.got .stmp-name{color:var(--navy)}
     @keyframes stampin{0%{opacity:0;transform:scale(2.5)}55%{opacity:1}70%{transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
+    @keyframes gcq-confetti{0%{opacity:0;transform:translate3d(0,-10px,0) rotate(0)}8%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx,0),105vh,0) rotate(var(--rot,720deg))}}
     @media (prefers-reduced-motion:reduce){.stmp .ink{animation:none}}
     .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;
       font-size:10px;font-weight:700;color:#9fb4bd;background:none;border:none;cursor:pointer;transition:color .2s}
@@ -307,8 +337,8 @@ function Styles() {
     .opt{width:100%;text-align:left;padding:14px;border:1.5px solid var(--line);border-radius:11px;
       background:#fff;font-weight:600;font-size:15px;font-family:inherit;cursor:pointer;transition:all .15s;margin-bottom:8px}
     .opt:hover{border-color:var(--navy)}
-    .opt.correct{border-color:var(--green);background:#e9f7f0}
-    .opt.wrong{border-color:var(--seal);background:#fbeaec}
+    .opt.correct{border-color:var(--green);background:#e6f1fb}
+    .opt.wrong{border-color:var(--seal);background:#fbe8eb}
     .bar{display:flex;align-items:center;gap:8px;margin:6px 0}
     .bar .track{flex:1;height:18px;background:var(--paper2);border-radius:6px;overflow:hidden}
     .bar .track>span{display:block;height:100%;background:var(--navy);border-radius:6px;transition:width .6s}
@@ -322,6 +352,7 @@ function Styles() {
   );
 }
 
+/* ---- Travel-themed nav icons --------------------------------------------- */
 function TabIcon({ name }) {
   const p = { width: 23, height: 23, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
   switch (name) {
@@ -338,9 +369,9 @@ function TabIcon({ name }) {
    APP ROOT
 ============================================================================ */
 function App() {
-  const [view, setView] = useState("boot");
-  const [me, setMe] = useState(null);
-  const [inbox, setInbox] = useState([]);
+  const [view, setView] = useState("boot"); // boot | landing | register | app | admin | screen
+  const [me, setMe] = useState(null);       // users:{id} record on this device
+  const [inbox, setInbox] = useState([]);   // inbound point events for me
   const [tab, setTab] = useState("passport");
   const [toast, setToast] = useState(null);
   const [flash, setFlash] = useState(null);
@@ -349,6 +380,7 @@ function App() {
 
   const ping = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
 
+  // boot: check URL for screen/admin mode
   useEffect(() => {
     const q = (typeof window !== "undefined" ? window.location.search : "") || "";
     if (q.includes("screen")) { setView("screen"); return; }
@@ -356,6 +388,7 @@ function App() {
     setView("landing");
   }, []);
 
+  // load my inbox + flash, recompute, persist score cache
   const refresh = useCallback(async (myRec) => {
     const rec = myRec || meRef.current;
     if (!rec) return;
@@ -365,22 +398,20 @@ function App() {
     setInbox(evs);
     const fl = await sget("flash:current");
     setFlash(fl && fl.endsAt > Date.now() ? fl : null);
+    // fold any inbound connections into my connections (for stamps + dedupe)
     let changed = false;
     const cons = [...(rec.connections || [])];
     for (const e of evs.filter((x) => x.type === "connection")) {
-      if (!cons.some((c) => c.id === e.fromId)) { cons.push({ id: e.fromId, name: e.fromName, market: e.fromMarket, in: true }); changed = true; }
-    }
-    const tri = [...(rec.triviaWith || [])];
-    for (const e of evs.filter((x) => x.type === "trivia")) {
-      if (!tri.includes(e.fromId)) { tri.push(e.fromId); changed = true; }
+      if (!cons.some((c) => c.id === e.fromId)) { cons.push({ id: e.fromId, name: e.fromName, market: e.fromMarket, team: e.fromTeam || "", in: true }); changed = true; }
     }
     let next = rec;
-    if (changed) { next = { ...rec, connections: cons, triviaWith: tri }; }
+    if (changed) { next = { ...rec, connections: cons }; }
+    // auto-awards: trio + full passport
     next = await applyAutoAwards(next, evs);
     setMe(next);
     if (changed || next !== rec) await sset("users:" + next.id, next);
     const finalTotal = (next.selfPoints || 0) + sum(evs, (e) => e.points);
-    await sset("score:" + next.id, { id: next.id, name: next.name, market: next.market, total: finalTotal, charity: next.charity || "" });
+    await sset("score:" + next.id, { id: next.id, name: next.name, market: next.market, total: finalTotal, table: next.table || "", charity: next.charity || "" });
   }, []);
 
   useEffect(() => {
@@ -400,17 +431,23 @@ function App() {
   if (view === "landing") return (<><Styles /><Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
   if (view === "register") return (<><Styles /><Register onDone={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
 
+  // ---- main app ----
   return (
     <div className="gcq">
       <Styles />
       <div className="wrap">
         <div style={{ flex: 1, paddingTop: 16, paddingBottom: 12 }}>
+          <div className="codebar">
+            <span className="codebar-lbl">Your Connect Code</span>
+            <span className="codebar-val mono">{me.code}</span>
+          </div>
           {flash && <div className="flash" style={{ marginBottom: 14 }}>⚡ {flash.title} — {flash.desc}{flash.mult > 1 ? `  (×${flash.mult} points!)` : ""}</div>}
           {tab === "passport" && <Passport me={me} total={total} inbox={inbox} collected={collected} ping={ping} setMe={setMe} refresh={refresh} />}
           {tab === "connect" && <Connect me={me} flash={flash} ping={ping} setMe={setMe} refresh={refresh} collected={collected} />}
           {tab === "quiz" && <QuizHub me={me} ping={ping} setMe={setMe} refresh={refresh} />}
           {tab === "learn" && <Learn me={me} ping={ping} setMe={setMe} refresh={refresh} />}
           {tab === "missions" && <Missions me={me} total={total} ping={ping} setMe={setMe} refresh={refresh} />}
+          <div className="credit">Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
         </div>
         <div className="nav">
           {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["missions", "Missions"]].map(([k, l]) => (
@@ -425,6 +462,9 @@ function App() {
   );
 }
 
+/* ============================================================================
+   DERIVATIONS
+============================================================================ */
 function collectedMarkets(me) {
   const s = new Set();
   (me.connections || []).forEach((c) => { if (c.market) s.add(c.market); });
@@ -433,9 +473,11 @@ function collectedMarkets(me) {
 async function applyAutoAwards(rec, evs) {
   let next = rec;
   const cols = collectedMarkets(next);
+  // Trio bonus
   if (cols.length >= 3 && !next.trioAwarded) {
     next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus, missions: { ...next.missions, m_3market: true } };
   }
+  // Full passport
   if (cols.length >= MARKETS.length && !next.fullAwarded) {
     next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
   }
@@ -443,7 +485,7 @@ async function applyAutoAwards(rec, evs) {
 }
 
 /* ============================================================================
-   LANDING
+   LANDING / SIGN-IN (email recovers an existing profile = account recovery)
 ============================================================================ */
 function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
   const [email, setEmail] = useState("");
@@ -467,9 +509,9 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
     <div className="gcq">
       <div className="wrap" style={{ justifyContent: "center", paddingTop: 40, paddingBottom: 40 }}>
         <div style={{ textAlign: "center", marginBottom: 8 }}>
-          <div className="eyebrow">Fidelity International · Tokyo</div>
+          <div className="eyebrow">Asia Pacific Business Forum 2026</div>
           <h1 className="h1" style={{ color: "#fff", margin: "10px 0 4px" }}>The Global<br />Connection Quest</h1>
-          <p style={{ color: "#9fb4bd", fontSize: 14 }}>Meet, learn, and connect across every market. Play for the charity pot.</p>
+          <p style={{ color: "#9fb4bd", fontSize: 14 }}>Meet, learn, and connect across every market.</p>
         </div>
         <div className="card" style={{ marginTop: 18 }}>
           <label className="eyebrow" style={{ color: "var(--navy)" }}>Sign in or register</label>
@@ -485,15 +527,16 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
         </div>
         <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 18, justifyContent: "center" }}>
           <span className="link" onClick={onAdmin} style={{ fontSize: 13, color: "#9fb4bd" }}>Gamesmaster access →</span>
-          <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Venue screen →</span>
+          <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Leaderboard →</span>
         </div>
+        <div className="credit">Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
       </div>
     </div>
   );
 }
 
 /* ============================================================================
-   REGISTER
+   REGISTER — Icebreaker Blueprint unlocks the passport + Connect Code
 ============================================================================ */
 function Register({ onDone, onBack }) {
   const [f, setF] = useState({ email: "", name: "", market: "", team: "", nationality: "", h1: "", h2: "", h3: "", exotic: "", languages: "", table: "" });
@@ -501,7 +544,7 @@ function Register({ onDone, onBack }) {
   const [err, setErr] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  const ready = f.email.includes("@") && f.name && f.market && f.nationality && f.h1 && f.h2 && f.h3 && f.exotic;
+  const ready = f.email.includes("@") && f.name && f.market && f.nationality && f.h1 && f.h2 && f.h3 && f.exotic && f.languages && f.table;
 
   async function submit() {
     if (!ready) { setErr("Please complete all required fields to unlock your code."); return; }
@@ -519,12 +562,12 @@ function Register({ onDone, onBack }) {
       team: f.team.trim(), nationality: f.nationality.trim(), hobbies: [f.h1.trim(), f.h2.trim(), f.h3.trim()],
       exotic: f.exotic.trim(), languages: f.languages.trim(),
       table: f.table.trim(), selfPoints: 0, connections: [], triviaWith: [],
-      missions: {}, japanQuiz: false, apacQuiz: false, apacDone: {}, createdAt: Date.now(),
+      missions: {}, japanQuiz: false, apacQuiz: false, apacDone: {}, culture: {}, createdAt: Date.now(),
     };
     await sset("users:" + id, rec);
-    await sset("code:" + code, { id, name: rec.name, market: rec.market });
+    await sset("code:" + code, { id, name: rec.name, market: rec.market, team: rec.team || "" });
     await sset("email:" + rec.email, { id });
-    await sset("score:" + id, { id, name: rec.name, market: rec.market, total: 0, charity: "" });
+    await sset("score:" + id, { id, name: rec.name, market: rec.market, total: 0, table: rec.table || "", charity: "" });
     setBusy(false);
     onDone(rec);
   }
@@ -557,8 +600,13 @@ function Register({ onDone, onBack }) {
             </div>
           </Field>
           <Field label="Most exotic place you've visited *"><input className="input" value={f.exotic} onChange={set("exotic")} placeholder="Madagascar" /></Field>
-          <Field label="Languages you speak"><input className="input" value={f.languages} onChange={set("languages")} placeholder="English, Japanese" /></Field>
-          <Field label="Day 1 table number"><input className="input" value={f.table} onChange={set("table")} placeholder="e.g. 12" inputMode="numeric" /></Field>
+          <Field label="Languages you speak *"><input className="input" value={f.languages} onChange={set("languages")} placeholder="English, Japanese" /></Field>
+          <Field label="Day 1 table number *">
+            <select className="input" value={f.table} onChange={set("table")}>
+              <option value="">Select…</option>
+              {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </Field>
           {err && <p style={{ color: "var(--seal)", fontSize: 13, fontWeight: 600 }}>{err}</p>}
           <button className="btn btn-primary" style={{ marginTop: 6 }} onClick={submit} disabled={busy || !ready}>
             {busy ? "Creating passport…" : "Unlock my Connect Code"}
@@ -610,7 +658,7 @@ function LockedSVG({ market }) {
   );
 }
 function Stamp({ market, idx, on }) {
-  const rot = ((idx * 37) % 19) - 9;
+  const rot = ((idx * 37) % 19) - 9; // deterministic tilt -9..+9
   const color = INK[idx % INK.length];
   return (
     <div className={"stmpwrap" + (on ? " got" : "")}>
@@ -645,7 +693,7 @@ function travelLabel(n) {
 }
 
 /* ============================================================================
-   PASSPORT
+   PASSPORT (dashboard)
 ============================================================================ */
 function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
   const rank = rankFor(total);
@@ -689,12 +737,16 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
           </div>
           <ProgressRing pct={(collected.length / MARKETS.length) * 100} />
         </div>
+        {collected.length < MARKETS.length && (
+          <div style={{ background: "var(--paper2)", borderRadius: 10, padding: "11px 13px", marginTop: 12 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", lineHeight: 1.4 }}>Meet someone from a market to ink its stamp — each new market is worth +{PTS.newMarket}.</p>
+          </div>
+        )}
         <div className="stamps" style={{ marginTop: 14 }}>
           {MARKETS.map((m, i) => <Stamp key={m} market={m} idx={i} on={collected.includes(m)} />)}
         </div>
-        {collected.length >= MARKETS.length
-          ? <p style={{ color: "var(--green)", fontWeight: 800, fontSize: 13, marginTop: 12, textAlign: "center" }}>★ Full passport — {PTS.fullPassport} bonus pts awarded!</p>
-          : <p className="muted" style={{ fontSize: 12, marginTop: 12, textAlign: "center" }}>Meet someone from a market to ink its stamp. Each new market is worth +{PTS.newMarket}.</p>}
+        {collected.length >= MARKETS.length &&
+          <p style={{ color: "var(--green)", fontWeight: 800, fontSize: 13, marginTop: 12, textAlign: "center" }}>★ Full passport — {PTS.fullPassport} bonus pts awarded!</p>}
       </div>
 
       {(me.team || me.table) && (
@@ -710,7 +762,7 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
 }
 
 /* ============================================================================
-   CONNECT
+   CONNECT — enter a peer's code (4-digit). Both sides score, once per person.
 ============================================================================ */
 function Connect({ me, flash, ping, setMe, refresh, collected }) {
   const [code, setCode] = useState("");
@@ -731,14 +783,16 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
     let earned = PTS.connect + (isNewMarket ? PTS.newMarket : 0);
     earned = earned * mult;
 
+    // credit me (initiator)
     const next = {
       ...me,
       selfPoints: (me.selfPoints || 0) + earned,
-      connections: [...(me.connections || []), { id: idx.id, name: idx.name, market: idx.market }],
+      connections: [...(me.connections || []), { id: idx.id, name: idx.name, market: idx.market, team: idx.team || "" }],
       missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
     };
     setMe(next); await sset("users:" + me.id, next);
-    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
+    // credit peer via their inbox (unique key, concurrency-safe)
+    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", ts: Date.now() };
     await sset("inbox:" + idx.id + ":" + ev.id, ev);
     setBusy(false); setCode("");
     ping(`+${earned} — connected with ${idx.name}!`);
@@ -791,8 +845,9 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
         {(me.connections || []).length === 0
           ? <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>No connections yet — go say hello.</p>
           : <div style={{ marginTop: 8 }}>{(me.connections || []).map((c, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--line)", fontSize: 14 }}>
-                <span style={{ fontWeight: 600 }}>{c.name}</span><span className="pill">{c.market}</span>
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid var(--line)", fontSize: 14 }}>
+                <span style={{ minWidth: 0 }}><span style={{ fontWeight: 600 }}>{c.name}</span>{c.team ? <span className="muted" style={{ fontSize: 12 }}> · {c.team}</span> : ""}</span>
+                <span className="pill" style={{ flexShrink: 0 }}>{c.market}</span>
               </div>))}</div>}
       </div>
     </div>
@@ -800,7 +855,10 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
 }
 
 /* ============================================================================
-   QUIZ HUB
+   TRIVIA — host generates a 3-question quiz from their blueprint, peer answers
+============================================================================ */
+/* ============================================================================
+   QUIZ HUB — three quiz types: About me · Japanese culture · APAC markets
 ============================================================================ */
 function QuizHub({ me, ping, setMe, refresh }) {
   const [kind, setKind] = useState("me");
@@ -809,24 +867,25 @@ function QuizHub({ me, ping, setMe, refresh }) {
       <div className="eyebrow">Quizzes</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Test &amp; be tested</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
-        {[["me", "About me"], ["japan", "Japan culture"], ["apac", "APAC markets"]].map(([k, l]) => (
+        {[["me", "Peer quiz"], ["japan", "Japan culture"], ["apac", "APAC markets"]].map(([k, l]) => (
           <button key={k} className={"seg" + (kind === k ? " on" : "")} style={{ fontSize: 12.5, padding: "11px 6px" }} onClick={() => setKind(k)}>{l}</button>
         ))}
       </div>
       {kind === "me" && <Trivia me={me} ping={ping} setMe={setMe} refresh={refresh} />}
-      {kind === "japan" && (<div><p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>Test your Japan etiquette before you land. +10 per correct answer, once.</p><JapanQuiz me={me} ping={ping} setMe={setMe} refresh={refresh} /></div>)}
-      {kind === "apac" && (<div><p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>Learn each market, one quiz at a time — explanations included.</p><ApacQuiz me={me} ping={ping} setMe={setMe} refresh={refresh} /></div>)}
+      {kind === "japan" && <CultureChallenges me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+      {kind === "apac" && <ApacQuiz me={me} ping={ping} setMe={setMe} refresh={refresh} />}
     </div>
   );
 }
 
 /* ============================================================================
-   PEER POP QUIZ
+   PEER POP QUIZ ("About me") — host builds a quiz, peer answers, 60s timer
 ============================================================================ */
 function Trivia({ me, ping, setMe, refresh }) {
-  const [stage, setStage] = useState("intro");
+  const [stage, setStage] = useState("intro"); // intro | run | done
   const [peer, setPeer] = useState(null);
   const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
   const [qs, setQs] = useState([]);
   const [qi, setQi] = useState(0);
   const [correct, setCorrect] = useState(0);
@@ -835,26 +894,29 @@ function Trivia({ me, ping, setMe, refresh }) {
   const tref = useRef(null);
   const correctRef = useRef(0);
 
-  function buildQuestions() {
+  function buildQuestions(p) {
     const hobbyPool = ["Skiing", "Cycling", "Painting", "Gardening", "Chess", "Running", "Baking", "Photography", "Yoga", "Surfing"];
-    const realHobby = (me.hobbies || []).filter(Boolean)[0] || "Reading";
+    const realHobby = (p.hobbies || []).filter(Boolean)[0] || "Reading";
     const hobbyOpts = shuffle([realHobby, ...pickN(hobbyPool.filter((h) => h !== realHobby), 2)]);
-    const placeOpts = shuffle([me.exotic || "Iceland", ...pickN(PLACE_POOL.filter((p) => p !== me.exotic), 2)]);
-    const marketOpts = shuffle([me.market, ...pickN(MARKETS.filter((m) => m !== me.market), 2)]);
+    const placeOpts = shuffle([p.exotic || "Iceland", ...pickN(PLACE_POOL.filter((x) => x !== p.exotic), 2)]);
+    const marketOpts = shuffle([p.market, ...pickN(MARKETS.filter((m) => m !== p.market), 2)]);
     return [
-      { q: `Which hobby belongs to ${me.name}?`, options: hobbyOpts, a: hobbyOpts.indexOf(realHobby) },
-      { q: `Where is the most exotic place ${me.name} has visited?`, options: placeOpts, a: placeOpts.indexOf(me.exotic || "Iceland") },
-      { q: `Which is ${me.name}'s home market?`, options: marketOpts, a: marketOpts.indexOf(me.market) },
+      { q: `Which hobby belongs to ${p.name}?`, options: hobbyOpts, a: hobbyOpts.indexOf(realHobby) },
+      { q: `Where is the most exotic place ${p.name} has visited?`, options: placeOpts, a: placeOpts.indexOf(p.exotic || "Iceland") },
+      { q: `Which is ${p.name}'s home market?`, options: marketOpts, a: marketOpts.indexOf(p.market) },
     ];
   }
 
-  async function lockPeer() {
+  async function startQuiz() {
     const c = code.trim();
     if (!/^\d{4}$/.test(c) || c === me.code) { ping("Enter a valid peer code"); return; }
+    setBusy(true);
     const idx = await sget("code:" + c);
-    if (!idx) { ping("Code not found"); return; }
-    if ((me.triviaWith || []).includes(idx.id)) { ping("Already quizzed " + idx.name); return; }
-    setPeer(idx); setQs(buildQuestions()); setStage("run"); setQi(0); setCorrect(0); correctRef.current = 0; setTime(60);
+    if (!idx) { setBusy(false); ping("Code not found"); return; }
+    if ((me.triviaWith || []).includes(idx.id)) { setBusy(false); ping("Already quizzed on " + idx.name); return; }
+    const full = (await sget("users:" + idx.id)) || idx;
+    setBusy(false);
+    setPeer(full); setQs(buildQuestions(full)); setStage("run"); setQi(0); setCorrect(0); correctRef.current = 0; setTime(60);
   }
 
   useEffect(() => {
@@ -880,41 +942,28 @@ function Trivia({ me, ping, setMe, refresh }) {
 
   async function finish(nc) {
     setStage("done");
-    const hostPts = PTS.triviaHost;
-    const guesserPts = nc * PTS.triviaCorrect;
-    const next = { ...me, selfPoints: (me.selfPoints || 0) + hostPts, triviaWith: [...(me.triviaWith || []), peer.id], missions: { ...me.missions, m_trivia: true } };
+    if (nc >= 1) fireConfetti();
+    const youPts = nc * PTS.triviaCorrect;
+    const next = { ...me, selfPoints: (me.selfPoints || 0) + youPts, triviaWith: [...(me.triviaWith || []), peer.id], missions: { ...me.missions, m_trivia: true } };
     setMe(next); await sset("users:" + me.id, next);
-    if (guesserPts > 0) {
-      const ev = { id: eid(), type: "trivia", points: guesserPts, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
-      await sset("inbox:" + peer.id + ":" + ev.id, ev);
-    }
+    const ev = { id: eid(), type: "trivia", points: PTS.triviaSubject, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
+    await sset("inbox:" + peer.id + ":" + ev.id, ev);
     refresh(next);
   }
 
   if (stage === "intro") return (
     <div>
       <div className="eyebrow">Peer Pop Quiz</div>
-      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Challenge a peer</h2>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>How well do you know them?</h2>
       <div className="card">
-        <p style={{ fontSize: 14 }}>Generate a 60-second, 3-question quiz about <b>you</b>, then hand your phone to a new contact. They answer against the clock.</p>
+        <p style={{ fontSize: 14 }}>Enter a colleague's Connect Code and we'll generate a 60-second, 3-question quiz <b>about them</b>. Answer against the clock — you'll only know the answers if you've really talked.</p>
         <div style={{ background: "var(--paper2)", borderRadius: 10, padding: 12, margin: "12px 0", fontSize: 13 }}>
-          <b>Scoring</b><br />+{PTS.triviaCorrect} to your guesser per correct answer<br />+{PTS.triviaHost} to you for starting the connection
+          <b>Scoring</b><br />+{PTS.triviaCorrect} to you per correct answer<br />+{PTS.triviaSubject} to them for the connection
         </div>
-        <button className="btn btn-primary" onClick={() => setStage("code")}>Start a quiz</button>
-      </div>
-    </div>
-  );
-
-  if (stage === "code") return (
-    <div>
-      <div className="eyebrow">Peer Pop Quiz</div>
-      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Who's playing?</h2>
-      <div className="card">
-        <div className="eyebrow" style={{ color: "var(--navy)" }}>Enter your guesser's Connect Code</div>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Their Connect Code</div>
         <input className="input mono" style={{ marginTop: 8, fontSize: 22, letterSpacing: ".3em", textAlign: "center" }}
           value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="0000" inputMode="numeric" />
-        <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={lockPeer}>Generate quiz & hand over phone</button>
-        <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setStage("intro")}>Cancel</button>
+        <button className="btn btn-primary" style={{ marginTop: 10 }} disabled={busy} onClick={startQuiz}>{busy ? "Building quiz…" : "Start the quiz"}</button>
       </div>
     </div>
   );
@@ -943,48 +992,97 @@ function Trivia({ me, ping, setMe, refresh }) {
       <div className="eyebrow">Peer Pop Quiz</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Time!</h2>
       <div className="card" style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>{correct === 3 ? "🏆" : correct >= 1 ? "🎉" : "🤝"}</div>
-        <p style={{ fontWeight: 800, fontSize: 20, margin: "8px 0" }}>{correct}/3 correct</p>
-        <p className="muted" style={{ fontSize: 14 }}>{peer && peer.name} earned +{correct * PTS.triviaCorrect}. You earned +{PTS.triviaHost} for connecting.</p>
+        <div style={{ fontSize: 48 }}>{correct === 3 ? "🏆" : correct >= 1 ? "✨" : "🤝"}</div>
+        <p style={{ fontWeight: 800, fontSize: 20, margin: "8px 0" }}>You scored {correct}/3 on {peer && peer.name}</p>
+        <p className="muted" style={{ fontSize: 14 }}>You earned +{correct * PTS.triviaCorrect}. {peer && peer.name} earned +{PTS.triviaSubject} for the connection.</p>
         <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => { setStage("intro"); setCode(""); setPeer(null); }}>Quiz someone else</button>
       </div>
     </div>
   );
 }
 function shuffle(a) { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[x[i], x[j]] = [x[j], x[i]]; } return x; }
+function fireConfetti() {
+  if (typeof document === "undefined") return;
+  const colors = ["#0073b9", "#4ea3d6", "#00314a", "#d2304a", "#c7d4dd", "#ffffff"];
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";
+  for (let i = 0; i < 90; i++) {
+    const p = document.createElement("div");
+    const w = 6 + Math.random() * 6;
+    const dx = (Math.random() * 2 - 1) * 120;
+    const rot = (360 + Math.random() * 720) * (Math.random() < 0.5 ? 1 : -1);
+    p.style.cssText = `position:absolute;top:-12px;left:${Math.random() * 100}%;width:${w}px;height:${w * 0.45}px;background:${colors[i % colors.length]};border-radius:1px;opacity:0;--dx:${dx}px;--rot:${rot}deg;animation:gcq-confetti ${1.9 + Math.random() * 1.5}s cubic-bezier(.15,.6,.35,1) ${Math.random() * 0.35}s forwards`;
+    wrap.appendChild(p);
+  }
+  document.body.appendChild(wrap);
+  setTimeout(() => wrap.remove(), 3800);
+}
 function pickN(a, n) { return shuffle(a).slice(0, n); }
 
 /* ============================================================================
-   LEARN
+   LEARN — Icebreakers (dinner) · Japan etiquette + quiz · APAC facts + quiz
 ============================================================================ */
 function Learn({ me, ping, setMe, refresh }) {
   const [sub, setSub] = useState("ice");
   return (
     <div>
-      <div className="eyebrow">Learn &amp; prepare</div>
-      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Study up</h2>
-      <div className="grid2" style={{ marginBottom: 12 }}>
-        {[["ice", "Dinner icebreakers"], ["japan", "Japan etiquette"]].map(([k, l]) => (
+      <div className="eyebrow">Field guide</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>While you're here</h2>
+      <div className="grid2" style={{ marginBottom: 14 }}>
+        {[["ice", "Icebreakers"], ["hands", "Show of hands"], ["japan", "Japanese etiquette"], ["phrases", "Japanese phrases"]].map(([k, l]) => (
           <button key={k} className={"seg" + (sub === k ? " on" : "")} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
       {sub === "ice" && <Icebreakers />}
+      {sub === "hands" && <ShowOfHands />}
       {sub === "japan" && <JapanFacts />}
-      <p className="muted" style={{ fontSize: 12, marginTop: 12, color: "#9fb4bd" }}>Looking for the Japan and APAC quizzes? They're now under the Quiz tab.</p>
+      {sub === "phrases" && <JapanesePhrases />}
     </div>
   );
 }
 function Icebreakers() {
-  const [i, setI] = useState(0);
+  const fresh = () => shuffle(ICEBREAKERS.map((_, i) => i));
+  const [order, setOrder] = useState(fresh);
+  const [start, setStart] = useState(0);
+  const trio = [0, 1, 2].map((k) => order[(start + k) % ICEBREAKERS.length]);
+  function surprise() {
+    const ns = start + 3;
+    if (ns >= ICEBREAKERS.length) { setOrder(fresh()); setStart(0); }
+    else setStart(ns);
+  }
   return (
     <div className="card">
-      <div className="eyebrow" style={{ color: "var(--navy)" }}>Conversation starter {i + 1}/{ICEBREAKERS.length}</div>
-      <p style={{ fontSize: 19, fontWeight: 700, margin: "14px 0", lineHeight: 1.35 }}>{ICEBREAKERS[i]}</p>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn btn-ghost" onClick={() => setI((i - 1 + ICEBREAKERS.length) % ICEBREAKERS.length)}>Previous</button>
-        <button className="btn btn-navy" onClick={() => setI((i + 1) % ICEBREAKERS.length)}>Next</button>
+      <div className="eyebrow" style={{ color: "var(--navy)" }}>Conversation starters</div>
+      <div style={{ margin: "10px 0 4px" }}>
+        {trio.map((idx, k) => (
+          <div key={idx} style={{ display: "flex", gap: 10, padding: "12px 0", borderBottom: k < 2 ? "1px solid var(--line)" : "none" }}>
+            <span style={{ color: "var(--navy)", fontWeight: 800, fontSize: 14, flexShrink: 0, marginTop: 2 }}>{k + 1}</span>
+            <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4 }}>{ICEBREAKERS[idx]}</p>
+          </div>
+        ))}
       </div>
-      <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setI(Math.floor(Math.random() * ICEBREAKERS.length))}>Surprise me</button>
+      <button className="btn btn-navy" style={{ marginTop: 10 }} onClick={surprise}>Surprise me — three more</button>
+    </div>
+  );
+}
+function ShowOfHands() {
+  const [i, setI] = useState(0);
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 10 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Show of hands</div>
+        <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>A quick way to learn what makes your colleagues tick. Read one out at the table and see who raises their hand — then ask them about it.</p>
+        <p style={{ fontWeight: 800, marginTop: 10 }}>Raise your hand if this energises you:</p>
+      </div>
+      <div className="card">
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>{i + 1} / {HANDS.length}</div>
+        <p style={{ fontSize: 19, fontWeight: 700, margin: "14px 0", lineHeight: 1.35 }}>{HANDS[i]}</p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-ghost" onClick={() => setI((i - 1 + HANDS.length) % HANDS.length)}>Previous</button>
+          <button className="btn btn-navy" onClick={() => setI((i + 1) % HANDS.length)}>Next</button>
+        </div>
+        <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setI(Math.floor(Math.random() * HANDS.length))}>Shuffle</button>
+      </div>
     </div>
   );
 }
@@ -1000,6 +1098,27 @@ function JapanFacts() {
     </div>
   );
 }
+function JapanesePhrases() {
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 10 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Japanese phrases</div>
+        <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>A few phrases to break the ice with hosts and colleagues. Give them a try — the effort always lands well.</p>
+      </div>
+      {PHRASES.map((p, i) => (
+        <div className="card" key={i} style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+            <p style={{ fontWeight: 800 }}>{p.romaji}</p>
+            <span style={{ fontSize: 15, color: "var(--navy)", flexShrink: 0 }}>{p.jp}</span>
+          </div>
+          <p style={{ fontSize: 14, marginTop: 3, fontWeight: 600 }}>{p.en}</p>
+          <p className="muted" style={{ fontSize: 13, marginTop: 3 }}>{p.note}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+// Shared quiz runner with explanation reveal + Next
 function QuizRunner({ questions, onFinish }) {
   const [qi, setQi] = useState(0);
   const [picked, setPicked] = useState(null);
@@ -1037,38 +1156,77 @@ function QuizRunner({ questions, onFinish }) {
   );
 }
 
-function JapanQuiz({ me, ping, setMe, refresh }) {
-  const [open, setOpen] = useState(false);
-  async function finish(correct) {
-    setOpen(false);
-    if (me.japanQuiz) { ping("Already completed"); return; }
-    const pts = correct * 10;
-    const next = { ...me, japanQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_learn: true } };
-    setMe(next); await sset("users:" + me.id, next); ping(`+${pts} — ${correct}/${JAPAN_QUIZ.length} on the Japan quiz`); refresh(next);
+function CultureChallenges({ me, ping, setMe, refresh }) {
+  const done = me.culture || {};
+  const doneCount = CULTURE.filter((c) => done[c.id]).length;
+  const [active, setActive] = useState(null); // challenge id being verified
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function verify(ch) {
+    const c = code.trim();
+    if (!/^\d{4}$/.test(c)) { ping("Enter their 4-digit code"); return; }
+    if (c === me.code) { ping("That's your own code!"); return; }
+    setBusy(true);
+    const idx = await sget("code:" + c);
+    if (!idx) { setBusy(false); ping("Code not found"); return; }
+    if (done[ch.id]) { setBusy(false); ping("Already done"); return; }
+    const next = { ...me, culture: { ...done, [ch.id]: true }, selfPoints: (me.selfPoints || 0) + ch.pts, missions: { ...me.missions, m_learn: true } };
+    setMe(next); await sset("users:" + me.id, next);
+    const ev = { id: eid(), type: "culture", points: 10, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
+    await sset("inbox:" + idx.id + ":" + ev.id, ev);
+    setBusy(false); setActive(null); setCode("");
+    ping(`+${ch.pts} — ${ch.t} with ${idx.name}!`);
+    refresh(next);
   }
+
   return (
-    <div className="card">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: open ? 12 : 0 }}>
-        <div>
-          <p style={{ fontWeight: 800 }}>Japan etiquette quiz</p>
-          <p className="muted" style={{ fontSize: 12 }}>{JAPAN_QUIZ.length} questions · +10 each correct</p>
-        </div>
-        {me.japanQuiz ? <span className="pill" style={{ background: "#e9f7f0", color: "var(--green)" }}>Completed ✓</span>
-          : !open && <button className="btn btn-primary" style={{ width: "auto", padding: "9px 16px", fontSize: 13 }} onClick={() => setOpen(true)}>Start</button>}
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <h2 className="h1" style={{ color: "#fff" }}>Culture challenges</h2>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#9fb4bd", flexShrink: 0 }}>{doneCount}/{CULTURE.length} done</span>
       </div>
-      {open && <QuizRunner questions={JAPAN_QUIZ} onFinish={finish} />}
+      <p style={{ fontSize: 14, lineHeight: 1.55, color: "#cdd9de", marginBottom: 14 }}>Practice one of the following challenges with a colleague, then enter their code to confirm — you both score.</p>
+      {CULTURE.map((ch) => {
+        const isDone = !!done[ch.id];
+        const isActive = active === ch.id;
+        return (
+          <div className="card" key={ch.id} style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 800 }}>{ch.t} <span className="muted" style={{ fontWeight: 700, fontSize: 12 }}>· +{ch.pts}</span></p>
+                <p className="muted" style={{ fontSize: 13, marginTop: 3 }}>{ch.d}</p>
+              </div>
+              {isDone && <span className="pill" style={{ background: "#e6f1fb", color: "var(--green)", flexShrink: 0 }}>Done ✓</span>}
+            </div>
+            {!isDone && !isActive && (
+              <button className="btn btn-primary" style={{ marginTop: 10, padding: "9px 14px" }} onClick={() => { setActive(ch.id); setCode(""); }}>Confirm with a peer</button>
+            )}
+            {!isDone && isActive && (
+              <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                <input className="input mono" style={{ fontSize: 18, letterSpacing: ".25em", textAlign: "center" }} value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="0000" inputMode="numeric" />
+                <button className="btn btn-primary" style={{ width: "auto", padding: "12px 16px" }} disabled={busy} onClick={() => verify(ch)}>{busy ? "…" : "Confirm"}</button>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function ApacQuiz({ me, ping, setMe, refresh }) {
   const markets = Object.keys(APAC_QUIZ);
+  const collected = collectedMarkets(me);
   const [active, setActive] = useState(null);
   const done = me.apacDone || {};
   const doneCount = markets.filter((m) => done[m]).length;
 
   async function finish(market, correct) {
     setActive(null);
+    const met = collected.includes(market);
+    if (!met) { ping(`Practice run — meet someone from ${market} to bank the points`); return; }
     if (done[market]) { ping("Already completed " + market); return; }
     const pts = correct * 5;
     const nextDone = { ...done, [market]: true };
@@ -1077,12 +1235,14 @@ function ApacQuiz({ me, ping, setMe, refresh }) {
   }
 
   if (active) {
+    const met = collected.includes(active);
     return (
       <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <span className="pill">{active}</span>
           <span className="link muted" style={{ fontSize: 13 }} onClick={() => setActive(null)}>Back</span>
         </div>
+        {!met && <p className="muted" style={{ fontSize: 12, marginBottom: 10, color: "var(--gold)" }}>Practice mode — meet someone from {active} to earn the points.</p>}
         <QuizRunner questions={APAC_QUIZ[active]} onFinish={(c) => finish(active, c)} />
       </div>
     );
@@ -1093,15 +1253,19 @@ function ApacQuiz({ me, ping, setMe, refresh }) {
         <div className="eyebrow" style={{ color: "var(--navy)" }}>Pick a market</div>
         <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>{doneCount}/{markets.length} done</span>
       </div>
-      <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Learn each market before peers quiz you. +5 per correct answer, once per market.</p>
+      <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Always open to learn. You bank the points once you've met someone from that market.</p>
       <div style={{ display: "grid", gap: 8 }}>
-        {markets.map((m) => (
-          <button key={m} className="opt" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }} onClick={() => setActive(m)}>
-            <span>{m}</span>
-            {done[m] ? <span style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>✓ Done</span>
-              : <span className="muted" style={{ fontSize: 12 }}>{APAC_QUIZ[m].length} Q →</span>}
-          </button>
-        ))}
+        {markets.map((m) => {
+          const met = collected.includes(m);
+          return (
+            <button key={m} className="opt" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }} onClick={() => setActive(m)}>
+              <span>{m}</span>
+              {done[m] ? <span style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>✓ Done</span>
+                : met ? <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 12 }}>Play for points →</span>
+                  : <span className="muted" style={{ fontSize: 12 }}>Meet someone to score →</span>}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1112,11 +1276,32 @@ function ApacQuiz({ me, ping, setMe, refresh }) {
 ============================================================================ */
 function Missions({ me, total, ping, setMe, refresh }) {
   const doneCount = MISSIONS.filter((m) => me.missions && me.missions[m.id]).length;
+  const [bonusCode, setBonusCode] = useState("");
+  const [bonusBusy, setBonusBusy] = useState(false);
   async function toggle(m) {
-    if (me.missions && me.missions[m.id]) return;
+    if (me.missions && me.missions[m.id]) return; // one-way; awarded once
     if (m.auto) { ping("This one completes automatically when you do it in the app."); return; }
     const next = { ...me, selfPoints: (me.selfPoints || 0) + m.pts, missions: { ...me.missions, [m.id]: true } };
     setMe(next); await sset("users:" + me.id, next); ping(`+${m.pts} — ${m.label}`); refresh(next);
+  }
+  async function redeem() {
+    const c = bonusCode.trim().toUpperCase().replace(/\s+/g, "");
+    if (!c) { ping("Enter the code"); return; }
+    setBonusBusy(true);
+    const b = await sget("bonus:" + c);
+    if (!b) { setBonusBusy(false); ping("Code not recognised"); return; }
+    const redeemed = me.bonusRedeemed || {};
+    if (redeemed[c]) { setBonusBusy(false); ping("You've already used that code"); return; }
+    if (b.maxUses && b.maxUses > 0) {
+      const used = await slist("bonusUse:" + c + ":");
+      if (used.length >= b.maxUses) { setBonusBusy(false); ping("This code has been fully claimed"); return; }
+    }
+    await sset("bonusUse:" + c + ":" + me.id, { ts: Date.now() });
+    const next = { ...me, selfPoints: (me.selfPoints || 0) + b.points, bonusRedeemed: { ...redeemed, [c]: true } };
+    setMe(next); await sset("users:" + me.id, next);
+    setBonusBusy(false); setBonusCode("");
+    ping(`+${b.points}${b.label ? " — " + b.label : ""}!`);
+    refresh(next);
   }
   return (
     <div>
@@ -1139,22 +1324,35 @@ function Missions({ me, total, ping, setMe, refresh }) {
         })}
       </div>
       <p className="muted" style={{ fontSize: 12, marginTop: 10, color: "#9fb4bd" }}>Tip: missions marked auto complete themselves when you act in the app (connecting, quizzing, learning).</p>
+
+      <div className="card" style={{ marginTop: 14 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Offline points</div>
+        <p className="muted" style={{ fontSize: 13, margin: "6px 0 10px" }}>Got a code from the Gamesmaster for an off-app challenge or win? Enter it here to claim the points.</p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input className="input mono" style={{ textTransform: "uppercase", letterSpacing: ".12em" }} value={bonusCode}
+            onChange={(e) => setBonusCode(e.target.value.toUpperCase().replace(/\s+/g, ""))} placeholder="ENTER CODE" />
+          <button className="btn btn-primary" style={{ width: "auto", padding: "12px 16px" }} disabled={bonusBusy} onClick={redeem}>{bonusBusy ? "…" : "Claim"}</button>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ============================================================================
-   BIG SCREEN — uses sgetAll for a single query leaderboard load
+   BIG SCREEN — venue leaderboard. Open with ?screen
 ============================================================================ */
 function BigScreen({ onExit }) {
   const [rows, setRows] = useState([]);
   const [count, setCount] = useState(0);
+  const [marketStandings, setMarketStandings] = useState([]);
   useEffect(() => {
     async function load() {
-      const all = await sgetAll("score:");
-      all.sort((a, b) => b.total - a.total);
-      setRows(all.slice(0, 12));
-      setCount(all.length);
+      const all = (await sgetAll("score:")).sort((a, b) => (b.total || 0) - (a.total || 0));
+      setRows(all.slice(0, 12)); setCount(all.length);
+      const agg = {};
+      all.forEach((s) => { if (!s.market) return; if (!agg[s.market]) agg[s.market] = { total: 0, count: 0 }; agg[s.market].total += (s.total || 0); agg[s.market].count += 1; });
+      const ms = Object.entries(agg).map(([market, v]) => ({ market, count: v.count, total: v.total, avg: Math.round(v.total / v.count) })).sort((a, b) => b.avg - a.avg);
+      setMarketStandings(ms);
     }
     load(); const t = setInterval(load, 12000); return () => clearInterval(t);
   }, []);
@@ -1162,9 +1360,21 @@ function BigScreen({ onExit }) {
     <div className="scrn">
       {onExit && <span className="link" onClick={onExit} style={{ position: "fixed", top: 14, right: 18, color: "#6f8893", fontSize: 13 }}>Exit</span>}
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div className="eyebrow" style={{ color: "var(--gold)" }}>Fidelity International · Tokyo</div>
+        <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
         <h1 style={{ fontSize: 44, fontWeight: 900, margin: "6px 0 2px" }}>Global Connection Quest</h1>
         <p style={{ color: "#9fb4bd", fontSize: 18, marginBottom: 24 }}>Live leaderboard · {count} explorers in play</p>
+        {marketStandings.length > 0 && (
+          <div style={{ background: "rgba(78,163,214,.14)", border: "1px solid rgba(78,163,214,.45)", borderRadius: 14, padding: "18px 22px", marginBottom: 28 }}>
+            <div className="eyebrow" style={{ color: "var(--gold)", marginBottom: 12 }}>Top market standings · average points per person</div>
+            {marketStandings.slice(0, 5).map((m, i) => (
+              <div key={m.market} style={{ display: "flex", alignItems: "center", gap: 16, padding: "9px 0", borderBottom: i < Math.min(5, marketStandings.length) - 1 ? "1px solid rgba(255,255,255,.08)" : "none" }}>
+                <span style={{ width: 32, fontFamily: "'Space Mono',monospace", fontWeight: 700, fontSize: 22, color: i === 0 ? "var(--gold)" : "#6f8893" }}>{i + 1}</span>
+                <span style={{ flex: 1, fontSize: 22, fontWeight: 800 }}>{m.market}<span style={{ color: "#9fb4bd", fontSize: 15, fontWeight: 600, marginLeft: 10 }}>{m.count} {m.count === 1 ? "person" : "people"}</span></span>
+                <span style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Space Mono',monospace", color: i === 0 ? "var(--gold)" : "#fff" }}>{m.avg}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
         {rows.map((r, i) => (
           <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 20, padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,.1)" }}>
@@ -1182,7 +1392,7 @@ function BigScreen({ onExit }) {
 }
 
 /* ============================================================================
-   ADMIN — uses sgetAll for single-query user and score loads
+   ADMIN / GAMESMASTER — open with ?admin
 ============================================================================ */
 function Admin({ onExit }) {
   const [ok, setOk] = useState(false);
@@ -1208,17 +1418,31 @@ function AdminPanel({ onExit }) {
   const [msg, setMsg] = useState("");
   const [search, setSearch] = useState("");
   const [boost, setBoost] = useState({ code: "", pts: "50", reason: "" });
+  const [bonus, setBonus] = useState({ code: "", pts: "50", label: "", uses: "" });
+  const [bonusList, setBonusList] = useState([]);
+  const [bonusUses, setBonusUses] = useState({});
 
   const load = useCallback(async () => {
-    const us = await sgetAll("users:");
+    const uk = await slist("users:"); const us = [];
+    for (const k of uk) { const u = await sget(k); if (u) us.push(u); }
     setUsers(us);
-    const ss = await sgetAll("score:");
-    ss.sort((a, b) => b.total - a.total);
-    setScores(ss);
-    const fl = await sget("flash:current");
-    setFlashState(fl && fl.endsAt > Date.now() ? fl : null);
+    const ss = (await sgetAll("score:")).sort((a, b) => (b.total || 0) - (a.total || 0)); setScores(ss);
+    const bk = await slist("bonus:"); const bs = [];
+    for (const k of bk) { const b = await sget(k); if (b) bs.push(b); }
+    bs.sort((a, b) => (b.ts || 0) - (a.ts || 0)); setBonusList(bs);
+    const uses = {};
+    for (const b of bs) { const uk2 = await slist("bonusUse:" + b.code + ":"); uses[b.code] = uk2.length; }
+    setBonusUses(uses);
+    const fl = await sget("flash:current"); setFlashState(fl && fl.endsAt > Date.now() ? fl : null);
   }, []);
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
+
+  // table standings — join scores (totals) with users (table numbers)
+  const tableOf = {};
+  users.forEach((u) => { if (u.table) tableOf[u.id] = String(u.table); });
+  const tAgg = {};
+  scores.forEach((s) => { const t = tableOf[s.id]; if (!t) return; if (!tAgg[t]) tAgg[t] = { total: 0, count: 0 }; tAgg[t].total += (s.total || 0); tAgg[t].count += 1; });
+  const tableRanks = Object.entries(tAgg).map(([t, v]) => ({ table: t, total: v.total, count: v.count, avg: Math.round(v.total / v.count) })).sort((a, b) => b.total - a.total);
 
   const dist = {};
   scores.forEach((s) => { dist[s.market] = (dist[s.market] || 0) + 1; });
@@ -1241,12 +1465,21 @@ function AdminPanel({ onExit }) {
     flashMsg(`+${p} to ${idx.name}`); setBoost({ code: "", pts: "50", reason: "" }); load();
   }
 
+  async function createBonus() {
+    const c = bonus.code.trim().toUpperCase().replace(/\s+/g, ""); const p = parseInt(bonus.pts, 10);
+    if (!c || !p) { flashMsg("Enter a code and points"); return; }
+    const mu = parseInt(bonus.uses, 10) || 0;
+    await sset("bonus:" + c, { code: c, points: p, label: bonus.label.trim(), maxUses: mu, ts: Date.now() });
+    flashMsg(`Code ${c} created (+${p}${mu ? `, ${mu} uses` : ""})`); setBonus({ code: "", pts: "50", label: "", uses: "" }); load();
+  }
+
   async function adjust(u, delta) {
     const next = { ...u, selfPoints: (u.selfPoints || 0) + delta };
     await sset("users:" + u.id, next);
+    // recompute that user's leaderboard cache from their inbox too
     const ik = await slist("inbox:" + u.id + ":"); let inb = 0;
     for (const k of ik) { const e = await sget(k); if (e) inb += e.points; }
-    await sset("score:" + u.id, { id: u.id, name: u.name, market: u.market, total: (next.selfPoints || 0) + inb, charity: u.charity || "" });
+    await sset("score:" + u.id, { id: u.id, name: u.name, market: u.market, total: (next.selfPoints || 0) + inb, table: u.table || "", charity: u.charity || "" });
     flashMsg(`Adjusted ${u.name} by ${delta > 0 ? "+" : ""}${delta}`); load();
   }
 
@@ -1297,6 +1530,18 @@ function AdminPanel({ onExit }) {
       </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Table standings</div>
+        {tableRanks.map((t, i) => (
+          <div className="lb-row" key={t.table}>
+            <span className="lb-rank">{i + 1}</span>
+            <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>Table {t.table} <span className="muted" style={{ fontWeight: 600, fontSize: 12 }}>· {t.count} {t.count === 1 ? "person" : "people"} · avg {t.avg}</span></span>
+            <span style={{ fontWeight: 900, fontFamily: "'Space Mono',monospace", width: 56, textAlign: "right" }}>{t.total}</span>
+          </div>
+        ))}
+        {tableRanks.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No table data yet.</p>}
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
         <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Award points in person (Etiquette boost)</div>
         <input className="input" style={{ marginBottom: 8 }} placeholder="Attendee's 4-digit code" value={boost.code} inputMode="numeric"
           onChange={(e) => setBoost({ ...boost, code: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
@@ -1305,6 +1550,35 @@ function AdminPanel({ onExit }) {
           <input className="input" placeholder="Reason (optional)" value={boost.reason} onChange={(e) => setBoost({ ...boost, reason: e.target.value })} />
         </div>
         <button className="btn btn-seal" onClick={giveBoost}>Award points</button>
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Offline bonus codes</div>
+        <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Create a code to announce or hand out. Each person can redeem once; set max uses to cap the total (blank = unlimited).</p>
+        <input className="input" style={{ marginBottom: 8, textTransform: "uppercase" }} placeholder="Code, e.g. KEYNOTE" value={bonus.code}
+          onChange={(e) => setBonus({ ...bonus, code: e.target.value.toUpperCase().replace(/\s+/g, "") })} />
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <input className="input" style={{ width: 80 }} placeholder="Pts" value={bonus.pts} inputMode="numeric" onChange={(e) => setBonus({ ...bonus, pts: e.target.value.replace(/\D/g, "") })} />
+          <input className="input" style={{ width: 110 }} placeholder="Max uses" value={bonus.uses} inputMode="numeric" onChange={(e) => setBonus({ ...bonus, uses: e.target.value.replace(/\D/g, "") })} />
+          <input className="input" placeholder="Label" value={bonus.label} onChange={(e) => setBonus({ ...bonus, label: e.target.value })} />
+        </div>
+        <button className="btn btn-navy" onClick={createBonus}>Create code</button>
+        {bonusList.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            {bonusList.map((b) => {
+              const used = bonusUses[b.code] || 0;
+              const full = b.maxUses > 0 && used >= b.maxUses;
+              return (
+                <div key={b.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderTop: "1px solid var(--line)", fontSize: 13 }}>
+                  <span className="mono" style={{ fontWeight: 700, letterSpacing: ".08em" }}>{b.code}</span>
+                  <span style={{ flex: 1, margin: "0 10px" }} className="muted">{b.label || "—"}</span>
+                  <span className="muted" style={{ fontSize: 12, marginRight: 8, color: full ? "var(--seal)" : "var(--muted)" }}>{used}{b.maxUses > 0 ? `/${b.maxUses}` : ""} used</span>
+                  <span className="pill">+{b.points}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
@@ -1344,11 +1618,7 @@ function AdminPanel({ onExit }) {
   );
 }
 
-function SetupNotice() {
-  return (<div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}><Styles /><div className="card"><div className="eyebrow" style={{ color: "var(--navy)" }}>Setup needed</div><h2 className="h2" style={{ marginTop: 6 }}>Add your Supabase keys</h2></div></div></div>);
-}
+function SetupNotice(){return (<div className="gcq"><div className="wrap" style={{justifyContent:"center"}}><Styles /><div className="card"><div className="eyebrow" style={{color:"var(--navy)"}}>Setup needed</div><h2 className="h2" style={{marginTop:6}}>Add your Supabase keys</h2></div></div></div>);}
 const _root = ReactDOM.createRoot(document.getElementById("root"));
 _root.render(CONFIGURED ? <App /> : <SetupNotice />);
-</script>
-</body>
-</html>
+</script></body></html>
