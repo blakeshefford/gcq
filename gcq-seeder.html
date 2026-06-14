@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GCQ Demo Seeder & Reset</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+  :root{--navy:#00314a;--paper:#f4efe4;--paper2:#ece3d0;--line:#d8cdb4;--green:#00945e;--seal:#c8102e;--gold:#b8893b;--muted:#5e6f78}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--navy);font-family:'Zen Kaku Gothic New',system-ui,sans-serif;color:#0b1f2a;padding:20px;line-height:1.45}
+  .wrap{max-width:680px;margin:0 auto}
+  .mono{font-family:'Space Mono',monospace}
+  h1{color:#fff;font-size:22px;margin:0 0 2px}
+  .sub{color:#9fb4bd;font-size:13px;margin:0 0 18px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--navy);display:block;margin-bottom:5px}
+  input,select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit;background:#fff;margin-bottom:12px;color:#0b1f2a}
+  select{appearance:none;-webkit-appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235e6f78' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
+  .row{display:flex;gap:10px}
+  .row>div{flex:1}
+  button{appearance:none;border:none;border-radius:10px;padding:13px;font-weight:800;font-size:15px;cursor:pointer;width:100%;font-family:inherit;transition:filter .15s}
+  button:active{filter:brightness(.94)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .b-seed{background:var(--green);color:#fff}
+  .b-reset{background:var(--seal);color:#fff}
+  .prog{height:12px;background:var(--paper2);border-radius:999px;overflow:hidden;margin:14px 0 4px}
+  .prog>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),#37c08a);transition:width .2s}
+  .log{background:#0b1f2a;color:#cfe;border-radius:10px;padding:12px;font-family:'Space Mono',monospace;font-size:12px;
+    height:180px;overflow:auto;white-space:pre-wrap;margin-top:14px}
+  .log .ok{color:#5fe0a5}.log .err{color:#ff7a8a}.log .warn{color:#ffcf6b}
+  .note{font-size:12px;color:var(--muted);margin-top:6px}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+  th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}
+  th{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  td.mono{font-family:'Space Mono',monospace;font-weight:700;color:var(--navy)}
+  .danger{border-color:var(--seal)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GCQ Demo Seeder &amp; Reset</h1>
+  <p class="sub">Seeds the Supabase backend with realistic demo attendees, then wipes everything clean for go-live.</p>
+
+  <div class="card">
+    <div class="row">
+      <div><label>Attendees</label><input id="n" class="mono" value="25" inputmode="numeric" /></div>
+      <div><label>Avg connections each</label><input id="avg" class="mono" value="5" inputmode="numeric" /></div>
+    </div>
+    <button class="b-seed" id="seed">Seed demo event</button>
+    <p class="note">Writes directly to Supabase. ~25 people gives a realistic leaderboard.</p>
+  </div>
+
+  <div class="card">
+    <label>Add a specific person (e.g. the CEO)</label>
+    <input id="p-name" placeholder="Full name — e.g. Sarah Chen" />
+    <div class="row">
+      <div>
+        <label>Market</label>
+        <select id="p-market"></select>
+      </div>
+      <div><label>Score</label><input id="p-score" class="mono" value="999" inputmode="numeric" /></div>
+    </div>
+    <button class="b-seed" id="addone">Add this person</button>
+    <p class="note">Drops a single named attendee onto the leaderboard at the score you set. Useful for putting someone on the board who isn't playing. Re-running with the same name + market updates their score instead of duplicating.</p>
+  </div>
+
+  <div class="card">
+    <label>Remove a specific person</label>
+    <input id="d-name" placeholder="Full name to remove — e.g. Sarah Chen" />
+    <button class="b-reset" id="delone" style="background:var(--gold)">Find &amp; remove</button>
+    <p class="note">Deletes one attendee and all their data (profile, code, score, inbox). Matches by name. If more than one person shares the name, it lists them so you can confirm before anything is deleted.</p>
+  </div>
+
+  <div class="card danger">
+    <label style="color:var(--seal)">Danger zone — go-live reset</label>
+    <p class="note" style="margin-top:0">Deletes ALL app data: every profile, connection, score, inbox event, and flash. Use before the real event starts.</p>
+    <button class="b-reset" id="reset">Reset ALL event data</button>
+  </div>
+
+  <div class="card">
+    <div class="prog"><span id="bar"></span></div>
+    <div class="log" id="log">Ready.</div>
+    <div id="logins"></div>
+  </div>
+</div>
+
+<script>
+// ---- Supabase config (matches index.html) -----------------------------------
+const SUPABASE_URL = "https://ytfvaoddykoqfhpyqzcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_k810-xD8BHBDuPOBjx3eoA_9mgymeWR";
+
+function sbHeaders(extra) {
+  const h = { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" };
+  if (/^eyJ/.test(SUPABASE_ANON_KEY)) h.Authorization = "Bearer " + SUPABASE_ANON_KEY;
+  return extra ? { ...h, ...extra } : h;
+}
+async function sget(k) {
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: sbHeaders() });
+    const rows = await r.json(); return rows && rows.length ? rows[0].value : null;
+  } catch { return null; }
+}
+async function sset(k, v) {
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv", {
+      method: "POST",
+      headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }),
+      body: JSON.stringify({ key: k, value: v })
+    }); return r.ok;
+  } catch { return false; }
+}
+async function sdel(k) {
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?key=eq." + encodeURIComponent(k), {
+      method: "DELETE", headers: sbHeaders()
+    }); return r.ok;
+  } catch { return false; }
+}
+// Delete every row whose key matches a prefix, in a single request.
+async function sdelPrefix(prefix) {
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?key=like." + encodeURIComponent(prefix) + "*", {
+      method: "DELETE", headers: sbHeaders()
+    }); return r.ok;
+  } catch { return false; }
+}
+async function slist(prefix) {
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() });
+    const rows = await r.json(); return Array.isArray(rows) ? rows.map(x => x.key) : [];
+  } catch { return []; }
+}
+
+// ---- Helpers ----------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const logEl = $("log");
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function log(msg, cls) {
+  const t = new Date().toLocaleTimeString();
+  logEl.innerHTML += `<span class="${cls||''}">[${t}] ${msg}</span>\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function setBar(pct) { $("bar").style.width = pct + "%"; }
+function setBusy(b) { $("seed").disabled = b; $("reset").disabled = b; const a = $("addone"); if (a) a.disabled = b; const d = $("delone"); if (d) d.disabled = b; }
+
+// ---- Data pools -------------------------------------------------------------
+const MARKETS = ["Australia","Bermuda","Canada","France","Hong Kong","Italy","Japan","Korea","Luxembourg","Mainland China","Singapore","Spain","Taiwan","United Kingdom","United States","Other"];
+const FIRST = ["Aiko","Hiroshi","Yuki","Mei","Wei","Ling","Jin","Min","Sofia","Marco","Elena","Luca","Pierre","Claire","Hans","Anna","James","Emma","Oliver","Grace","Liam","Charlotte","Noah","Ava","Raj","Priya","Arjun","Aria","Diego","Lucia"];
+const LAST = ["Tan","Wong","Lee","Chen","Yamamoto","Sato","Kim","Park","Smith","Jones","Brown","Muller","Rossi","Dubois","Garcia","Silva","Nguyen","Patel","Singh","Schmidt"];
+const HOBBIES = ["Skiing","Cycling","Painting","Gardening","Chess","Running","Baking","Photography","Yoga","Surfing","Sailing","Climbing","Cooking","Diving","Tennis"];
+const PLACES = ["Madagascar","Patagonia","Iceland","Bhutan","Namibia","Mongolia","Greenland","Petra","Antarctica","Easter Island","Galapagos","Faroe Islands"];
+const CHARITIES = ["Medecins Sans Frontieres","WWF","UNICEF","Room to Read","The Ocean Cleanup","Save the Children"];
+const TEAMS = ["Distribution","Investment Risk","Marketing","Operations","Technology","Product","Client Solutions","Finance","Compliance","HR"];
+const NATS = ["British","Japanese","Singaporean","American","Canadian","Italian","French","Korean","Australian","Chinese","German","Spanish"];
+
+const rnd = (a) => a[Math.floor(Math.random() * a.length)];
+const rint = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const uid = () => "u_seed_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const eid = () => "e_seed_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function pickN(a, n) { const x = [...a]; for (let i = x.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [x[i],x[j]]=[x[j],x[i]]; } return x.slice(0, n); }
+
+// ---- Seed -------------------------------------------------------------------
+$("seed").onclick = async () => {
+  const N = Math.max(2, parseInt($("n").value, 10) || 25);
+  const avg = Math.max(0, parseInt($("avg").value, 10) || 5);
+  logEl.innerHTML = ""; $("logins").innerHTML = ""; setBar(0); setBusy(true);
+  log(`Building ${N} attendees…`);
+
+  // 1. Build attendee objects
+  const used = new Set(); const att = [];
+  for (let k = 0; k < N; k++) {
+    let code; do { code = String(rint(1000, 9999)); } while (used.has(code));
+    used.add(code);
+    const fn = rnd(FIRST), ln = rnd(LAST);
+    att.push({
+      id: uid(), code,
+      name: `${fn} ${ln}`,
+      email: `${fn.toLowerCase()}.${ln.toLowerCase()}.${code}@seed.test`,
+      market: rnd(MARKETS), team: rnd(TEAMS), nationality: rnd(NATS),
+      hobbies: pickN(HOBBIES, 3), exotic: rnd(PLACES),
+      languages: "English", charity: rnd(CHARITIES),
+      table: String(rint(1, 20)),
+      selfPoints: 0, connections: [], triviaWith: [],
+      missions: {}, japanQuiz: false, apacQuiz: false,
+      trioAwarded: false, fullAwarded: false,
+      createdAt: Date.now() - rint(0, 7200000),
+      _inbox: [], _met: new Set(),
+    });
+  }
+
+  // 2. Quizzes + manual missions
+  for (const a of att) {
+    if (Math.random() < 0.7) { a.japanQuiz = true; a.selfPoints += rint(2,3)*20; a.missions.m_learn = true; }
+    if (Math.random() < 0.5) { a.apacQuiz = true; a.selfPoints += rint(1,2)*20; a.missions.m_apac = true; }
+    for (const m of ["m_bow","m_meishi","m_coffee"]) {
+      if (Math.random() < 0.5) { a.selfPoints += rint(10,15); a.missions[m] = true; }
+    }
+  }
+
+  // 3. Connections
+  function meet(a, b) {
+    if (a.id === b.id || a._met.has(b.id)) return;
+    a._met.add(b.id);
+    const cols = new Set(a.connections.map(c => c.market));
+    const isNew = b.market !== a.market && !cols.has(b.market);
+    a.connections.push({ id: b.id, name: b.name, market: b.market });
+    a.selfPoints += 20 + (isNew ? 30 : 0);
+    a.missions.m_code = true;
+    b._inbox.push({ id: eid(), type: "connection", points: 20, fromId: a.id, fromName: a.name, fromMarket: a.market, ts: Date.now() - rint(0, 3600000) });
+  }
+  const meetings = Math.round(N * avg / 2);
+  for (let m = 0; m < meetings; m++) {
+    const a = rnd(att); let b = rnd(att); let g = 0;
+    while ((b.id === a.id || a._met.has(b.id)) && g++ < 8) b = rnd(att);
+    meet(a, b);
+    if (Math.random() < 0.6) meet(b, a);
+  }
+
+  // 4. Trivia
+  for (const a of att) {
+    if (Math.random() < 0.35) {
+      const rounds = rint(1, 2);
+      for (let r = 0; r < rounds; r++) {
+        let g = rnd(att); if (g.id === a.id) continue;
+        a.selfPoints += 20; a.triviaWith.push(g.id); a.missions.m_trivia = true;
+        g._inbox.push({ id: eid(), type: "trivia", points: rint(1,3)*50, fromId: a.id, fromName: a.name, fromMarket: a.market, ts: Date.now() - rint(0, 3600000) });
+      }
+    }
+  }
+
+  // 5. Trio / full passport bonuses
+  for (const a of att) {
+    const cols = new Set([...a.connections.map(c => c.market), ...a._inbox.filter(e => e.type==="connection").map(e => e.fromMarket)]);
+    if (cols.size >= 3 && !a.trioAwarded) { a.selfPoints += 150; a.trioAwarded = true; a.missions.m_3market = true; }
+    if (cols.size >= MARKETS.length && !a.fullAwarded) { a.selfPoints += 300; a.fullAwarded = true; }
+  }
+
+  // 6. Assemble write ops
+  const ops = [];
+  for (const a of att) {
+    const inboxPts = a._inbox.reduce((s, e) => s + e.points, 0);
+    const total = a.selfPoints + inboxPts;
+    const rec = { ...a }; delete rec._inbox; delete rec._met;
+    ops.push(["users:" + a.id, rec]);
+    ops.push(["code:" + a.code, { id: a.id, name: a.name, market: a.market }]);
+    ops.push(["email:" + a.email, { id: a.id }]);
+    ops.push(["score:" + a.id, { id: a.id, name: a.name, market: a.market, total, charity: a.charity }]);
+    for (const ev of a._inbox) ops.push(["inbox:" + a.id + ":" + ev.id, ev]);
+  }
+
+  log(`Writing ${ops.length} records to Supabase…`);
+  let ok = 0, fail = 0;
+  for (let i = 0; i < ops.length; i++) {
+    const [k, v] = ops[i];
+    const res = await sset(k, v);
+    res ? ok++ : fail++;
+    setBar(Math.round((i + 1) / ops.length * 100));
+    // Small pause every 20 writes to avoid rate limiting
+    if (i > 0 && i % 20 === 0) await sleep(150);
+  }
+
+  log(`Done — ${ok} writes ok, ${fail} failed.`, fail ? "warn" : "ok");
+  if (fail) log(`Some writes failed. Re-run Seed to retry.`, "warn");
+
+  // Sample logins table
+  const sample = att.slice(0, 6);
+  let html = `<p class="note" style="margin-top:14px"><b>Sample logins</b> — sign in at gcq-ajq.pages.dev with any of these emails:</p>
+  <table><tr><th>Name</th><th>Market</th><th>Email</th><th>Code</th></tr>`;
+  for (const a of sample) html += `<tr><td>${a.name}</td><td>${a.market}</td><td class="mono" style="font-size:11px">${a.email}</td><td class="mono">${a.code}</td></tr>`;
+  html += `</table>`;
+  $("logins").innerHTML = html;
+  log(`Check gcq-ajq.pages.dev/?screen for the leaderboard.`, "ok");
+  setBusy(false);
+};
+
+// ---- Add a specific person (e.g. CEO) ---------------------------------------
+// Populate the market dropdown
+(function () {
+  const sel = $("p-market");
+  if (sel) sel.innerHTML = MARKETS.map(m => `<option value="${m}">${m}</option>`).join("");
+})();
+
+$("addone").onclick = async () => {
+  const name = $("p-name").value.trim();
+  const market = $("p-market").value;
+  const score = Math.max(0, parseInt($("p-score").value, 10) || 0);
+  if (!name) { log("Enter a name first.", "err"); return; }
+
+  setBusy(true); setBar(0);
+  log(`Adding ${name} (${market}) at ${score} pts…`);
+
+  // Reuse an existing record if this exact name + market is already on the board,
+  // so re-running updates the score rather than creating a duplicate.
+  const existing = (await sgetAllSeeder("score:")).find(
+    s => s && s.name === name && s.market === market
+  );
+
+  let id, code;
+  if (existing) {
+    id = existing.id;
+    const u = await sget("users:" + id);
+    code = (u && u.code) || String(rint(1000, 9999));
+    log(`Found existing entry for ${name}, updating score.`, "warn");
+  } else {
+    id = "u_manual_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    code = String(rint(1000, 9999));
+  }
+
+  const email = name.toLowerCase().replace(/[^a-z]+/g, ".") + "." + code + "@seed.test";
+  const rec = {
+    id, code, name, market,
+    team: "", nationality: "", hobbies: [], exotic: "",
+    languages: "", charity: "", table: "",
+    selfPoints: score, connections: [], triviaWith: [],
+    missions: {}, japanQuiz: false, apacQuiz: false,
+    trioAwarded: false, fullAwarded: false, createdAt: Date.now(),
+  };
+
+  let ok = true;
+  ok = (await sset("users:" + id, rec)) && ok;
+  ok = (await sset("code:" + code, { id, name, market })) && ok;
+  ok = (await sset("email:" + email, { id })) && ok;
+  ok = (await sset("score:" + id, { id, name, market, total: score, charity: "" })) && ok;
+  setBar(100);
+
+  log(ok ? `✓ ${name} is on the board at ${score} pts.` : `Some writes failed — re-run to retry.`, ok ? "ok" : "warn");
+  setBusy(false);
+};
+
+// ---- Remove a specific person -----------------------------------------------
+$("delone").onclick = async () => {
+  const name = $("d-name").value.trim();
+  if (!name) { log("Enter a name to remove.", "err"); return; }
+  const lc = name.toLowerCase();
+
+  setBusy(true); setBar(0);
+  log(`Searching for "${name}"…`);
+
+  // Match against BOTH profiles and score records. The leaderboard is driven by
+  // score: keys, and an orphaned score: (one with no matching users: profile)
+  // won't show up in a profile-only search — so we sweep both and merge by id.
+  const allUsers = await sgetAllSeeder("users:");
+  const allScores = await sgetAllSeeder("score:");
+  const userMatches = allUsers.filter(u => u && u.name && u.name.toLowerCase() === lc);
+  const scoreMatches = allScores.filter(s => s && s.name && s.name.toLowerCase() === lc);
+
+  // Build a map of id -> best-known record (prefer the full profile if we have it)
+  const byId = new Map();
+  for (const s of scoreMatches) if (s.id) byId.set(s.id, { id: s.id, name: s.name, market: s.market });
+  for (const u of userMatches) if (u.id) byId.set(u.id, u); // overwrite with richer profile
+  const people = [...byId.values()];
+
+  if (people.length === 0) { log(`No one found with the name "${name}".`, "warn"); setBusy(false); return; }
+
+  if (people.length > 1) {
+    log(`${people.length} entries match that name:`, "warn");
+    people.forEach((u, i) => log(`  ${i + 1}. ${u.name} — ${u.market || "?"}${u.code ? ` (code ${u.code})` : " (score-only entry)"}`));
+    if (!confirm(`${people.length} entries are named "${name}". Remove ALL of them? Cancel to do it precisely via the gamesmaster panel instead.`)) {
+      log("Cancelled — nothing deleted.", "warn"); setBusy(false); return;
+    }
+  } else {
+    const u = people[0];
+    if (!confirm(`Remove ${u.name} (${u.market || "?"}${u.code ? `, code ${u.code}` : ""}) and all their data? This cannot be undone.`)) {
+      log("Cancelled — nothing deleted.", "warn"); setBusy(false); return;
+    }
+  }
+
+  // Collect every key tied to each matched id. Always delete users:/score:/inbox:
+  // by id; delete code:/email: when we have a profile that carries them.
+  let keys = [];
+  for (const u of people) {
+    keys.push("users:" + u.id);
+    keys.push("score:" + u.id);
+    if (u.code) keys.push("code:" + u.code);
+    if (u.email) keys.push("email:" + u.email);
+    const inbox = await slist("inbox:" + u.id + ":");
+    keys = keys.concat(inbox);
+  }
+
+  log(`Deleting ${keys.length} keys for ${people.length} entr${people.length === 1 ? "y" : "ies"}…`, "warn");
+  let del = 0, derr = 0;
+  for (let i = 0; i < keys.length; i++) {
+    (await sdel(keys[i])) ? del++ : derr++;
+    setBar(Math.round((i + 1) / keys.length * 100));
+  }
+  log(derr ? `Removed with ${derr} errors — re-run to finish.` : `✓ Removed ${people.map(m => m.name).join(", ")}. Refresh the screen to confirm.`, derr ? "warn" : "ok");
+  $("d-name").value = "";
+  setBusy(false);
+};
+
+// Local bulk-read helper (the app's sgetAll isn't in this file)
+async function sgetAllSeeder(prefix) {
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() });
+    const rows = await r.json();
+    return Array.isArray(rows) ? rows.map(x => x.value).filter(Boolean) : [];
+  } catch { return []; }
+}
+
+// ---- Reset ------------------------------------------------------------------
+$("reset").onclick = async () => {
+  if (!confirm("Delete ALL event data — every profile, connection, score, inbox, and flash? This cannot be undone.")) return;
+  setBusy(true); setBar(0); $("logins").innerHTML = "";
+  log(`Wiping all data…`, "warn");
+
+  // One bulk delete per prefix — a handful of requests instead of thousands.
+  const prefixes = ["users:", "code:", "email:", "score:", "inbox:"];
+  let ok = 0, fail = 0;
+  for (let i = 0; i < prefixes.length; i++) {
+    (await sdelPrefix(prefixes[i])) ? ok++ : fail++;
+    log(`  cleared ${prefixes[i]}`);
+    setBar(Math.round((i + 1) / (prefixes.length + 1) * 100));
+  }
+  (await sdel("flash:current")) ? ok++ : fail++;
+  setBar(100);
+
+  if (fail) { log(`${fail} delete request(s) failed — re-run Reset.`, "warn"); setBusy(false); return; }
+
+  // Verify nothing remains
+  let left = 0;
+  for (const p of prefixes) left += (await slist(p)).length;
+  log(left === 0 ? `✓ Database fully reset — clean slate.` : `${left} keys remain — re-run Reset to finish.`, left === 0 ? "ok" : "warn");
+  setBusy(false);
+};
+
+</script>
+</body>
+</html>
