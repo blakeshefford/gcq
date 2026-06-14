@@ -381,6 +381,10 @@ function Styles() {
     .lt-act{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:6px}
     .lt-bar{flex:1;background:linear-gradient(180deg,#4ea3d6,#0a6b7c);border-radius:4px 4px 0 0;min-height:3px;transition:height .8s cubic-bezier(.2,.8,.2,1)}
     .lt-actx{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#6f8893;font-family:'Space Mono',monospace}
+    .lt-stats{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .lt-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px 18px}
+    .lt-statn{font-family:'Space Mono',monospace;font-weight:900;font-size:34px;color:#fff;line-height:1}
+    .lt-statl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#9fb4bd;margin-top:8px;font-weight:700}
   `}</style>
   );
 }
@@ -1379,7 +1383,7 @@ function BigScreenLive({ onExit }) {
   const [count, setCount] = useState(0);
   const [markets, setMarkets] = useState([]);
   const [feed, setFeed] = useState([]);
-  const [activity, setActivity] = useState([]);
+  const [stats, setStats] = useState({ connections: 0, quizzes: 0, points: 0, active: 0 });
 
   useEffect(() => {
     let alive = true;
@@ -1399,23 +1403,32 @@ function BigScreenLive({ onExit }) {
         return { ts: value.ts || 0, type: value.type || "event", points: value.points || 0, fromName: value.fromName || "", fromMarket: value.fromMarket || "", toName: rec.name || "", toMarket: rec.market || "" };
       }).filter((e) => e.fromName || e.toName).sort((a, b) => b.ts - a.ts);
 
-      const now = Date.now(), binMs = 5 * 60000, bins = 12;
-      const buckets = Array.from({ length: bins }, () => 0);
-      events.forEach((e) => { const age = now - e.ts; if (age < 0 || age > bins * binMs) return; const idx = bins - 1 - Math.floor(age / binMs); if (idx >= 0 && idx < bins) buckets[idx]++; });
+      const since = Date.now() - 10 * 60000;
+      const recent = events.filter((e) => e.ts >= since);
+      const connections = recent.filter((e) => e.type === "connection").length;
+      const quizzes = recent.filter((e) => e.type === "trivia").length;
+      const points = recent.reduce((s, e) => s + (e.points || 0), 0);
+      const active = new Set(recent.map((e) => e.toName).filter(Boolean)).size;
 
       if (!alive) return;
       setRows(sorted.slice(0, 10)); setCount(players.length);
-      setMarkets(ms); setFeed(events.slice(0, 250)); setActivity(buckets);
+      setMarkets(ms); setFeed(events.slice(0, 250));
+      setStats({ connections, quizzes, points, active });
     }
     load(); const t = setInterval(load, 15000); return () => { alive = false; clearInterval(t); };
   }, []);
 
-  const tickerItems = feed.length ? feed : [
-    { type: "welcome", fromName: "Welcome to the Global Connection Quest", points: 0 },
-    { type: "welcome", fromName: "Meet someone new to score points", points: 0 },
-    { type: "welcome", fromName: "Collect every market stamp", points: 0 },
-  ];
-  const dur = Math.max(24, tickerItems.length * 2.4);
+  const PROMPTS = ["Meet someone new to score +20", "A new market stamp is worth +30", "Collect every market for a +300 bonus", "Run a quiz with a new contact", "Three markets unlocks a +150 bonus", "Find someone from a market you haven't met"];
+  const tickerItems = [];
+  if (feed.length === 0) {
+    PROMPTS.forEach((p) => tickerItems.push({ type: "welcome", fromName: p, points: 0 }));
+  } else {
+    feed.forEach((e, idx) => {
+      tickerItems.push(e);
+      if ((idx + 1) % 5 === 0) tickerItems.push({ type: "welcome", fromName: PROMPTS[Math.floor(idx / 5) % PROMPTS.length], points: 0 });
+    });
+  }
+  const dur = Math.max(40, tickerItems.length * 5);
 
   function lineFor(e, i) {
     const dotColor = e.type === "connection" ? "var(--green)" : e.type === "trivia" ? "#5fb0d8" : e.type === "boost" ? "var(--gold)" : e.type === "welcome" ? "#9fb4bd" : "#37c08a";
@@ -1429,7 +1442,6 @@ function BigScreenLive({ onExit }) {
   }
 
   const maxMarket = Math.max(1, ...markets.map((m) => m.total));
-  const maxAct = Math.max(1, ...activity);
 
   return (
     <div className="scrn lt-wrap" style={{ padding: 0 }}>
@@ -1475,11 +1487,13 @@ function BigScreenLive({ onExit }) {
           </div>
 
           <div className="lt-card">
-            <div className="lt-h2">Activity · last hour</div>
-            <div className="lt-act">
-              {activity.map((v, i) => (<div className="lt-bar" key={i} style={{ height: Math.max(3, v / maxAct * 130) + "px" }} />))}
+            <div className="lt-h2">Last 10 minutes</div>
+            <div className="lt-stats">
+              <div className="lt-stat"><div className="lt-statn">{stats.connections.toLocaleString()}</div><div className="lt-statl">Connections</div></div>
+              <div className="lt-stat"><div className="lt-statn">{stats.quizzes.toLocaleString()}</div><div className="lt-statl">Quizzes played</div></div>
+              <div className="lt-stat"><div className="lt-statn">{stats.points.toLocaleString()}</div><div className="lt-statl">Points scored</div></div>
+              <div className="lt-stat"><div className="lt-statn">{stats.active.toLocaleString()}</div><div className="lt-statl">Active explorers</div></div>
             </div>
-            <div className="lt-actx"><span>−60 min</span><span>now</span></div>
           </div>
         </div>
       </div>
