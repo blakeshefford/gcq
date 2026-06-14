@@ -18,24 +18,14 @@ const SUPABASE_URL = "https://ytfvaoddykoqfhpyqzcj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_k810-xD8BHBDuPOBjx3eoA_9mgymeWR";
 const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KEY);
 
-/* ============================================================================
-   GLOBAL CONNECTION QUEST — Fidelity International Leadership Conference, Tokyo
-   Single-file production React app. Backend = artifact shared storage
-   (cross-device, concurrency-safe: every write owns a unique key).
-   ----------------------------------------------------------------------------
-   EDIT THESE CONSTANTS to finalise: MARKETS, content packs, scoring, admin PIN.
-============================================================================ */
-
-// ---- CONFIG: replace with your real attending markets ----------------------
 const MARKETS = [
   "Australia", "Bermuda", "Canada", "France", "Hong Kong", "Italy",
   "Japan", "Korea", "Luxembourg", "Mainland China", "Singapore", "Spain",
   "Taiwan", "United Kingdom", "United States", "Other",
 ];
 
-const ADMIN_PIN = "tokyo2026"; // change before the event
+const ADMIN_PIN = "tokyo2026";
 
-// 3-letter codes shown on each passport stamp
 const CODES = {
   "Australia": "AUS", "Bermuda": "BMU", "Canada": "CAN", "France": "FRA",
   "Hong Kong": "HKG", "Italy": "ITA", "Japan": "JPN", "Korea": "KOR",
@@ -46,18 +36,16 @@ const codeFor = (m) => CODES[m] || m.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpp
 const INK = ["#c8102e", "#00314a", "#0a6b7c", "#a9791f", "#7a2e57", "#1f7a44"];
 const GLYPHS = ["\u2736", "\u2756", "\u2737", "\u25C6", "\u2742", "\u273F"];
 
-// ---- Scoring (tune as you like) --------------------------------------------
 const PTS = {
-  connect: 20,        // each new person you meet (both sides earn)
-  newMarket: 30,      // bonus when that person unlocks a new market stamp
-  triviaCorrect: 50,  // per correct answer, to the guesser
-  triviaHost: 20,     // to the quiz host, once per round
-  trioBonus: 150,     // meet 3 different markets
-  fullPassport: 300,  // collect every market
-  table: 75,          // table challenge complete
+  connect: 20,
+  newMarket: 30,
+  triviaCorrect: 50,
+  triviaHost: 20,
+  trioBonus: 150,
+  fullPassport: 300,
+  table: 75,
 };
 
-// ---- Levels ----------------------------------------------------------------
 const RANKS = [
   { min: 0, name: "Newcomer" },
   { min: 150, name: "Connector" },
@@ -66,7 +54,6 @@ const RANKS = [
   { min: 1500, name: "Global Citizen" },
 ];
 
-// ---- Missions (honour-system + auto-complete) ------------------------------
 const MISSIONS = [
   { id: "m_code", label: "Enter a peer's 4-digit Connect Code", pts: 15, auto: "firstConnect" },
   { id: "m_coffee", label: "Meet a new market peer during the morning coffee break", pts: 10 },
@@ -78,7 +65,6 @@ const MISSIONS = [
   { id: "m_apac", label: "Complete the APAC Fast Facts quiz", pts: 20, auto: "apacQuiz" },
 ];
 
-// ---- Dinner icebreakers (leadership-tuned) ---------------------------------
 const ICEBREAKERS = [
   "What is a business risk you took this year that failed — and what did you learn?",
   "Which market outside your own are you most curious about, and why?",
@@ -92,7 +78,6 @@ const ICEBREAKERS = [
   "What's a small ritual that keeps you grounded when things get noisy?",
 ];
 
-// ---- Did You Know? Japan (true general etiquette/culture) -------------------
 const JAPAN_FACTS = [
   { t: "The bow (お辞儀)", d: "A slight bow (about 15°) is a casual greeting; a deeper 30–45° bow shows respect or thanks. Keep your back straight and eyes lowered." },
   { t: "Business cards (名刺 meishi)", d: "Offer and receive cards with both hands, card facing the recipient. Read it carefully before setting it down — never stuff it straight into a pocket." },
@@ -110,7 +95,6 @@ const JAPAN_QUIZ = [
   { q: "Is tipping expected in Japan?", options: ["Yes, 10–15%", "No, it's not customary", "Only in taxis"], a: 1, explain: "Tipping isn't customary and can cause confusion. Excellent service is simply the standard." },
 ];
 
-// ---- APAC business quiz, by market (explanations double as the fast facts) --
 const APAC_QUIZ = {
   "Australia": [
     { q: "What is the local name for the mandatory retirement savings system in Australia?", options: ["401(k)", "Superannuation", "Mandatory Provident Fund", "National Pension Scheme"], a: 1, explain: "Australia's mandatory retirement saving structure is universally known as \u201cSuperannuation\u201d or \u201cSuper\u201d." },
@@ -176,8 +160,7 @@ const APAC_QUIZ = {
 const PLACE_POOL = ["Madagascar", "Patagonia", "Iceland", "Bhutan", "Namibia", "Mongolia", "Greenland", "Petra", "Antarctica", "Easter Island"];
 
 /* ============================================================================
-   STORAGE LAYER — Supabase (PostgREST). Single shared key/value table 'kv'.
-   Works with publishable (sb_publishable_...) or legacy anon JWT (eyJ...) keys.
+   STORAGE LAYER — Supabase (PostgREST)
 ============================================================================ */
 const SB_KEY = SUPABASE_ANON_KEY;
 function sbHeaders(extra) {
@@ -185,14 +168,43 @@ function sbHeaders(extra) {
   if (/^eyJ/.test(SB_KEY)) h.Authorization = "Bearer " + SB_KEY;
   return extra ? { ...h, ...extra } : h;
 }
+// Resilient fetch: retries transient failures (network errors, 429, 5xx) with
+// backoff so a write/read isn't silently lost during traffic spikes. Permanent
+// errors (4xx other than 429) are returned as-is — retrying won't help them.
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+async function sbFetch(path, opts) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const r = await fetch(SUPABASE_URL + path, opts);
+      if (r.ok) return r;
+      // Retry only on rate limit / server errors; give up on other 4xx.
+      if (r.status === 429 || r.status >= 500) { lastErr = r; await sleep(400 * (attempt + 1)); continue; }
+      return r;
+    } catch (e) { lastErr = e; await sleep(400 * (attempt + 1)); }
+  }
+  if (lastErr instanceof Response) return lastErr;
+  throw lastErr || new Error("request failed");
+}
 async function sget(k) {
-  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: sbHeaders() }); const rows = await r.json(); return rows && rows.length ? rows[0].value : null; } catch { return null; }
+  try { const r = await sbFetch("/rest/v1/kv?select=value&key=eq." + encodeURIComponent(k), { headers: sbHeaders() }); const rows = await r.json(); return rows && rows.length ? rows[0].value : null; } catch { return null; }
 }
 async function sset(k, v) {
-  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv", { method: "POST", headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify({ key: k, value: v }) }); return r.ok; } catch { return false; }
+  try { const r = await sbFetch("/rest/v1/kv", { method: "POST", headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }), body: JSON.stringify({ key: k, value: v }) }); return r.ok; } catch { return false; }
 }
 async function slist(prefix) {
-  try { const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() }); const rows = await r.json(); return Array.isArray(rows) ? rows.map((x) => x.key) : []; } catch { return []; }
+  try { const r = await sbFetch("/rest/v1/kv?select=key&key=like." + encodeURIComponent(prefix) + "*", { headers: sbHeaders() }); const rows = await r.json(); return Array.isArray(rows) ? rows.map((x) => x.key) : []; } catch { return []; }
+}
+// Bulk fetch: returns all values for keys matching prefix in a single query
+async function sgetAll(prefix) {
+  try {
+    const r = await sbFetch(
+      "/rest/v1/kv?select=value&key=like." + encodeURIComponent(prefix) + "*",
+      { headers: sbHeaders() }
+    );
+    const rows = await r.json();
+    return Array.isArray(rows) ? rows.map((x) => x.value).filter(Boolean) : [];
+  } catch { return []; }
 }
 
 /* ============================================================================
@@ -213,7 +225,7 @@ async function genCode() {
 }
 
 /* ============================================================================
-   DESIGN SYSTEM (injected once) — passport / hanko visual identity
+   DESIGN SYSTEM
 ============================================================================ */
 function Styles() {
   return (
@@ -310,7 +322,6 @@ function Styles() {
   );
 }
 
-/* ---- Travel-themed nav icons --------------------------------------------- */
 function TabIcon({ name }) {
   const p = { width: 23, height: 23, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
   switch (name) {
@@ -327,9 +338,9 @@ function TabIcon({ name }) {
    APP ROOT
 ============================================================================ */
 function App() {
-  const [view, setView] = useState("boot"); // boot | landing | register | app | admin | screen
-  const [me, setMe] = useState(null);       // users:{id} record on this device
-  const [inbox, setInbox] = useState([]);   // inbound point events for me
+  const [view, setView] = useState("boot");
+  const [me, setMe] = useState(null);
+  const [inbox, setInbox] = useState([]);
   const [tab, setTab] = useState("passport");
   const [toast, setToast] = useState(null);
   const [flash, setFlash] = useState(null);
@@ -338,7 +349,6 @@ function App() {
 
   const ping = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
 
-  // boot: check URL for screen/admin mode
   useEffect(() => {
     const q = (typeof window !== "undefined" ? window.location.search : "") || "";
     if (q.includes("screen")) { setView("screen"); return; }
@@ -346,7 +356,6 @@ function App() {
     setView("landing");
   }, []);
 
-  // load my inbox + flash, recompute, persist score cache
   const refresh = useCallback(async (myRec) => {
     const rec = myRec || meRef.current;
     if (!rec) return;
@@ -356,7 +365,6 @@ function App() {
     setInbox(evs);
     const fl = await sget("flash:current");
     setFlash(fl && fl.endsAt > Date.now() ? fl : null);
-    // fold any inbound connections into my connections (for stamps + dedupe)
     let changed = false;
     const cons = [...(rec.connections || [])];
     for (const e of evs.filter((x) => x.type === "connection")) {
@@ -368,7 +376,6 @@ function App() {
     }
     let next = rec;
     if (changed) { next = { ...rec, connections: cons, triviaWith: tri }; }
-    // auto-awards: trio + full passport
     next = await applyAutoAwards(next, evs);
     setMe(next);
     if (changed || next !== rec) await sset("users:" + next.id, next);
@@ -393,7 +400,6 @@ function App() {
   if (view === "landing") return (<><Styles /><Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
   if (view === "register") return (<><Styles /><Register onDone={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
 
-  // ---- main app ----
   return (
     <div className="gcq">
       <Styles />
@@ -419,9 +425,6 @@ function App() {
   );
 }
 
-/* ============================================================================
-   DERIVATIONS
-============================================================================ */
 function collectedMarkets(me) {
   const s = new Set();
   (me.connections || []).forEach((c) => { if (c.market) s.add(c.market); });
@@ -430,11 +433,9 @@ function collectedMarkets(me) {
 async function applyAutoAwards(rec, evs) {
   let next = rec;
   const cols = collectedMarkets(next);
-  // Trio bonus
   if (cols.length >= 3 && !next.trioAwarded) {
     next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus, missions: { ...next.missions, m_3market: true } };
   }
-  // Full passport
   if (cols.length >= MARKETS.length && !next.fullAwarded) {
     next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
   }
@@ -442,7 +443,7 @@ async function applyAutoAwards(rec, evs) {
 }
 
 /* ============================================================================
-   LANDING / SIGN-IN (email recovers an existing profile = account recovery)
+   LANDING
 ============================================================================ */
 function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
   const [email, setEmail] = useState("");
@@ -492,7 +493,7 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
 }
 
 /* ============================================================================
-   REGISTER — Icebreaker Blueprint unlocks the passport + Connect Code
+   REGISTER
 ============================================================================ */
 function Register({ onDone, onBack }) {
   const [f, setF] = useState({ email: "", name: "", market: "", team: "", nationality: "", h1: "", h2: "", h3: "", exotic: "", languages: "", table: "" });
@@ -609,7 +610,7 @@ function LockedSVG({ market }) {
   );
 }
 function Stamp({ market, idx, on }) {
-  const rot = ((idx * 37) % 19) - 9; // deterministic tilt -9..+9
+  const rot = ((idx * 37) % 19) - 9;
   const color = INK[idx % INK.length];
   return (
     <div className={"stmpwrap" + (on ? " got" : "")}>
@@ -644,7 +645,7 @@ function travelLabel(n) {
 }
 
 /* ============================================================================
-   PASSPORT (dashboard)
+   PASSPORT
 ============================================================================ */
 function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
   const rank = rankFor(total);
@@ -709,7 +710,7 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
 }
 
 /* ============================================================================
-   CONNECT — enter a peer's code (4-digit). Both sides score, once per person.
+   CONNECT
 ============================================================================ */
 function Connect({ me, flash, ping, setMe, refresh, collected }) {
   const [code, setCode] = useState("");
@@ -730,7 +731,6 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
     let earned = PTS.connect + (isNewMarket ? PTS.newMarket : 0);
     earned = earned * mult;
 
-    // credit me (initiator)
     const next = {
       ...me,
       selfPoints: (me.selfPoints || 0) + earned,
@@ -738,7 +738,6 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
       missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
     };
     setMe(next); await sset("users:" + me.id, next);
-    // credit peer via their inbox (unique key, concurrency-safe)
     const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
     await sset("inbox:" + idx.id + ":" + ev.id, ev);
     setBusy(false); setCode("");
@@ -801,10 +800,7 @@ function Connect({ me, flash, ping, setMe, refresh, collected }) {
 }
 
 /* ============================================================================
-   TRIVIA — host generates a 3-question quiz from their blueprint, peer answers
-============================================================================ */
-/* ============================================================================
-   QUIZ HUB — three quiz types: About me · Japanese culture · APAC markets
+   QUIZ HUB
 ============================================================================ */
 function QuizHub({ me, ping, setMe, refresh }) {
   const [kind, setKind] = useState("me");
@@ -825,10 +821,10 @@ function QuizHub({ me, ping, setMe, refresh }) {
 }
 
 /* ============================================================================
-   PEER POP QUIZ ("About me") — host builds a quiz, peer answers, 60s timer
+   PEER POP QUIZ
 ============================================================================ */
 function Trivia({ me, ping, setMe, refresh }) {
-  const [stage, setStage] = useState("intro"); // intro | code | run | done
+  const [stage, setStage] = useState("intro");
   const [peer, setPeer] = useState(null);
   const [code, setCode] = useState("");
   const [qs, setQs] = useState([]);
@@ -959,7 +955,7 @@ function shuffle(a) { const x = [...a]; for (let i = x.length - 1; i > 0; i--) {
 function pickN(a, n) { return shuffle(a).slice(0, n); }
 
 /* ============================================================================
-   LEARN — Icebreakers (dinner) · Japan etiquette + quiz · APAC facts + quiz
+   LEARN
 ============================================================================ */
 function Learn({ me, ping, setMe, refresh }) {
   const [sub, setSub] = useState("ice");
@@ -1004,7 +1000,6 @@ function JapanFacts() {
     </div>
   );
 }
-// Shared quiz runner with explanation reveal + Next
 function QuizRunner({ questions, onFinish }) {
   const [qi, setQi] = useState(0);
   const [picked, setPicked] = useState(null);
@@ -1118,7 +1113,7 @@ function ApacQuiz({ me, ping, setMe, refresh }) {
 function Missions({ me, total, ping, setMe, refresh }) {
   const doneCount = MISSIONS.filter((m) => me.missions && me.missions[m.id]).length;
   async function toggle(m) {
-    if (me.missions && me.missions[m.id]) return; // one-way; awarded once
+    if (me.missions && me.missions[m.id]) return;
     if (m.auto) { ping("This one completes automatically when you do it in the app."); return; }
     const next = { ...me, selfPoints: (me.selfPoints || 0) + m.pts, missions: { ...me.missions, [m.id]: true } };
     setMe(next); await sset("users:" + me.id, next); ping(`+${m.pts} — ${m.label}`); refresh(next);
@@ -1149,19 +1144,17 @@ function Missions({ me, total, ping, setMe, refresh }) {
 }
 
 /* ============================================================================
-   BIG SCREEN — venue leaderboard. Open with ?screen
+   BIG SCREEN — uses sgetAll for a single query leaderboard load
 ============================================================================ */
 function BigScreen({ onExit }) {
   const [rows, setRows] = useState([]);
   const [count, setCount] = useState(0);
   useEffect(() => {
     async function load() {
-      try {
-        const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=like.score:*", { headers: sbHeaders() });
-        const rows = await r.json();
-        const all = (Array.isArray(rows) ? rows.map((x) => x.value) : []).sort((a, b) => (b.total || 0) - (a.total || 0));
-        setRows(all.slice(0, 12)); setCount(all.length);
-      } catch {}
+      const all = await sgetAll("score:");
+      all.sort((a, b) => b.total - a.total);
+      setRows(all.slice(0, 12));
+      setCount(all.length);
     }
     load(); const t = setInterval(load, 12000); return () => clearInterval(t);
   }, []);
@@ -1189,7 +1182,7 @@ function BigScreen({ onExit }) {
 }
 
 /* ============================================================================
-   ADMIN / GAMESMASTER — open with ?admin
+   ADMIN — uses sgetAll for single-query user and score loads
 ============================================================================ */
 function Admin({ onExit }) {
   const [ok, setOk] = useState(false);
@@ -1217,15 +1210,13 @@ function AdminPanel({ onExit }) {
   const [boost, setBoost] = useState({ code: "", pts: "50", reason: "" });
 
   const load = useCallback(async () => {
-    const uk = await slist("users:"); const us = [];
-    for (const k of uk) { const u = await sget(k); if (u) us.push(u); }
+    const us = await sgetAll("users:");
     setUsers(us);
-    try {
-      const r = await fetch(SUPABASE_URL + "/rest/v1/kv?select=value&key=like.score:*", { headers: sbHeaders() });
-      const rows = await r.json();
-      setScores((Array.isArray(rows) ? rows.map((x) => x.value) : []).sort((a, b) => (b.total || 0) - (a.total || 0)));
-    } catch { setScores([]); }
-    const fl = await sget("flash:current"); setFlashState(fl && fl.endsAt > Date.now() ? fl : null);
+    const ss = await sgetAll("score:");
+    ss.sort((a, b) => b.total - a.total);
+    setScores(ss);
+    const fl = await sget("flash:current");
+    setFlashState(fl && fl.endsAt > Date.now() ? fl : null);
   }, []);
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
 
@@ -1253,7 +1244,6 @@ function AdminPanel({ onExit }) {
   async function adjust(u, delta) {
     const next = { ...u, selfPoints: (u.selfPoints || 0) + delta };
     await sset("users:" + u.id, next);
-    // recompute that user's leaderboard cache from their inbox too
     const ik = await slist("inbox:" + u.id + ":"); let inb = 0;
     for (const k of ik) { const e = await sget(k); if (e) inb += e.points; }
     await sset("score:" + u.id, { id: u.id, name: u.name, market: u.market, total: (next.selfPoints || 0) + inb, charity: u.charity || "" });
@@ -1353,7 +1343,6 @@ function AdminPanel({ onExit }) {
     </div></div>
   );
 }
-
 
 function SetupNotice() {
   return (<div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}><Styles /><div className="card"><div className="eyebrow" style={{ color: "var(--navy)" }}>Setup needed</div><h2 className="h2" style={{ marginTop: 6 }}>Add your Supabase keys</h2></div></div></div>);
