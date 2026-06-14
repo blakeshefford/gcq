@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>The Global Connection Quest · Fidelity International · Tokyo</title>
+<meta name="theme-color" content="#00314a" />
+<style>
+  html,body,#root{height:100%}
+  body{margin:0;background:#00314a}
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:#00314a;color:#9fb4bd;font-family:system-ui,sans-serif;font-size:14px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"><div id="boot">Loading the Quest…</div></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ============================================================================
+   GLOBAL CONNECTION QUEST — Fidelity International Leadership Conference, Tokyo
+   Static HTML build for Cloudflare Pages. Backend = Pages Function at /api
+   (D1-backed key/value: get / set / list-by-prefix). Falls back to in-memory
+   when /api is unreachable (e.g. this preview) so you can click around.
+   ----------------------------------------------------------------------------
+   EDIT THESE CONSTANTS to finalise: MARKETS, content packs, scoring, admin PIN.
+============================================================================ */
+
+// ---- CONFIG: replace with your real attending markets ----------------------
+const MARKETS = [
+  "Australia", "Bermuda", "Canada", "France", "Hong Kong", "Italy",
+  "Japan", "Korea", "Luxembourg", "Mainland China", "Singapore", "Spain",
+  "Taiwan", "United Kingdom", "United States", "Other",
+];
+
+const ADMIN_PIN = "tokyo2026"; // change before the event (note: client-side gate only, not real security)
+
+// 3-letter codes shown on each passport stamp
+const CODES = {
+  "Australia": "AUS", "Bermuda": "BMU", "Canada": "CAN", "France": "FRA",
+  "Hong Kong": "HKG", "Italy": "ITA", "Japan": "JPN", "Korea": "KOR",
+  "Luxembourg": "LUX", "Mainland China": "CHN", "Singapore": "SGP", "Spain": "ESP",
+  "Taiwan": "TWN", "United Kingdom": "GBR", "United States": "USA", "Other": "WLD",
+};
+const codeFor = (m) => CODES[m] || m.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
+const INK = ["#c8102e", "#00314a", "#0a6b7c", "#a9791f", "#7a2e57", "#1f7a44"];
+const GLYPHS = ["\u2736", "\u2756", "\u2737", "\u25C6", "\u2742", "\u273F"];
+
+// ---- Scoring (tune as you like) --------------------------------------------
+const PTS = {
+  connect: 20, newMarket: 30, triviaCorrect: 50, triviaHost: 20,
+  trioBonus: 150, fullPassport: 300, table: 75,
+};
+
+// ---- Levels ----------------------------------------------------------------
+const RANKS = [
+  { min: 0, name: "Newcomer" },
+  { min: 150, name: "Connector" },
+  { min: 400, name: "Ambassador" },
+  { min: 800, name: "Diplomat" },
+  { min: 1500, name: "Global Citizen" },
+];
+
+// ---- Missions --------------------------------------------------------------
+const MISSIONS = [
+  { id: "m_code", label: "Enter a peer's 4-digit Connect Code", pts: 15, auto: "firstConnect" },
+  { id: "m_coffee", label: "Meet a new market peer during the morning coffee break", pts: 10 },
+  { id: "m_trivia", label: "Run a Pop Quiz with someone new", pts: 20, auto: "firstTrivia" },
+  { id: "m_bow", label: "Practise a proper Japanese bow with a colleague", pts: 15 },
+  { id: "m_meishi", label: "Exchange a business card the Japanese way (two hands)", pts: 15 },
+  { id: "m_3market", label: "Collect stamps from 3 different markets", pts: 25, auto: "trio" },
+  { id: "m_learn", label: "Complete the 'Did You Know? Japan' quiz", pts: 20, auto: "japanQuiz" },
+  { id: "m_apac", label: "Complete the APAC Fast Facts quiz", pts: 20, auto: "apacQuiz" },
+];
+
+// ---- Dinner icebreakers (leadership-tuned) ---------------------------------
+const ICEBREAKERS = [
+  "What is a business risk you took this year that failed — and what did you learn?",
+  "Which market outside your own are you most curious about, and why?",
+  "What's one leadership habit you've changed your mind about in the last five years?",
+  "Describe a moment a customer taught you something your strategy hadn't.",
+  "What's a decision you're proud of that nobody noticed at the time?",
+  "If you could borrow one strength from a colleague at this table, what would it be?",
+  "What does 'good' look like for your team twelve months from now?",
+  "What's the best piece of advice you've received from someone more junior than you?",
+  "Which part of the business would you most like to spend a week inside?",
+  "What's a small ritual that keeps you grounded when things get noisy?",
+];
+
+// ---- Did You Know? Japan ----------------------------------------------------
+const JAPAN_FACTS = [
+  { t: "The bow (お辞儀)", d: "A slight bow (about 15°) is a casual greeting; a deeper 30–45° bow shows respect or thanks. Keep your back straight and eyes lowered." },
+  { t: "Business cards (名刺 meishi)", d: "Offer and receive cards with both hands, card facing the recipient. Read it carefully before setting it down — never stuff it straight into a pocket." },
+  { t: "Shoes off", d: "Remove shoes when entering homes, many traditional restaurants and tatami rooms. Look for a step up and a shoe rack near the entrance." },
+  { t: "No tipping", d: "Tipping is not customary and can cause confusion. Excellent service is simply the standard." },
+  { t: "Slurping is fine", d: "Slurping noodles is normal and even signals enjoyment. Lift small bowls towards your mouth rather than leaning down to them." },
+  { t: "Chopstick care", d: "Never stand chopsticks upright in rice or pass food chopstick-to-chopstick — both echo funeral rites. Rest them on the holder." },
+  { t: "Quiet trains", d: "Phone calls on trains are frowned upon. Set your phone to 'manner mode' (silent) in public transport." },
+  { t: "Giving & receiving", d: "Hand over and accept items — gifts, cards, payment — with both hands and a slight bow. Presentation matters as much as the gift." },
+];
+
+const JAPAN_QUIZ = [
+  { q: "How should you hand over a business card?", options: ["One hand, quickly", "Both hands, card facing them", "Slide it across the table"], a: 1 },
+  { q: "What should you NOT do with chopsticks?", options: ["Rest them on a holder", "Stand them upright in rice", "Use them to eat noodles"], a: 1 },
+  { q: "Is tipping expected in Japan?", options: ["Yes, 10–15%", "No, it's not customary", "Only in taxis"], a: 1 },
+];
+
+// ---- APAC Fast Facts — PLACEHOLDER. Replace with your real business facts ---
+const APAC_FACTS = {
+  "Japan": ["Replace with a real fact about the Japan business.", "Add a key client or product highlight."],
+  "Hong Kong": ["Replace with a real fact about Hong Kong.", "Add a market opportunity note."],
+  "Singapore": ["Replace with a real fact about Singapore.", "Add a growth statistic."],
+  "Mainland China": ["Replace with a real fact about Mainland China.", "Add a market highlight."],
+  "Taiwan": ["Replace with a real fact about Taiwan.", "Add an opportunity note."],
+  "Korea": ["Replace with a real fact about Korea.", "Add a client highlight."],
+  "Australia": ["Replace with a real fact about Australia.", "Add a client highlight."],
+};
+
+const APAC_QUIZ = [
+  { q: "Replace these with real questions about your APAC business.", options: ["Option A", "Option B", "Option C"], a: 0 },
+  { q: "Each correct answer reinforces market knowledge before peers quiz each other.", options: ["Option A", "Option B", "Option C"], a: 0 },
+];
+
+const PLACE_POOL = ["Madagascar", "Patagonia", "Iceland", "Bhutan", "Namibia", "Mongolia", "Greenland", "Petra", "Antarctica", "Easter Island"];
+
+/* ============================================================================
+   STORAGE LAYER — talks to /api (Cloudflare Pages Function over D1).
+   Probes once on first use; if /api is unreachable, uses an in-memory map so
+   the app still runs in preview (single device, non-persistent).
+============================================================================ */
+const API = "/api";
+let ONLINE = true;
+let _readyP = null;
+const _mem = {};
+
+async function probe() {
+  try { const r = await fetch(API + "/ping", { cache: "no-store" }); ONLINE = r.ok; }
+  catch { ONLINE = false; }
+}
+function ensure() { if (!_readyP) _readyP = probe(); return _readyP; }
+
+async function sget(k) {
+  await ensure();
+  if (!ONLINE) { return _mem[k] !== undefined ? _mem[k] : null; }
+  try {
+    const r = await fetch(API + "/get?key=" + encodeURIComponent(k), { cache: "no-store" });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.value != null ? JSON.parse(d.value) : null;
+  } catch { return null; }
+}
+async function sset(k, v) {
+  await ensure();
+  if (!ONLINE) { _mem[k] = v; return true; }
+  try {
+    await fetch(API + "/set", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ key: k, value: JSON.stringify(v) }) });
+    return true;
+  } catch { return false; }
+}
+async function slist(p) {
+  await ensure();
+  if (!ONLINE) { return Object.keys(_mem).filter((k) => k.startsWith(p)); }
+  try {
+    const r = await fetch(API + "/list?prefix=" + encodeURIComponent(p), { cache: "no-store" });
+    if (!r.ok) return [];
+    const d = await r.json();
+    return d.keys || [];
+  } catch { return []; }
+}
+
+/* ============================================================================
+   HELPERS
+============================================================================ */
+const uid = () => "u_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const eid = () => "e_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
+const rankFor = (p) => { let r = RANKS[0]; for (const x of RANKS) if (p >= x.min) r = x; return r; };
+const nextRank = (p) => RANKS.find((x) => x.min > p) || null;
+async function genCode() {
+  for (let i = 0; i < 12; i++) {
+    const c = String(Math.floor(1000 + Math.random() * 9000));
+    const exists = await sget("code:" + c);
+    if (!exists) return c;
+  }
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+/* ============================================================================
+   DESIGN SYSTEM
+============================================================================ */
+function Styles() {
+  return (
+    <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
+    :root{
+      --navy:#00314a; --navy2:#002233; --ink:#0b1f2a;
+      --paper:#f4efe4; --paper2:#ece3d0; --line:#d8cdb4;
+      --seal:#c8102e; --green:#00945e; --gold:#b8893b; --muted:#5e6f78;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    .gcq{font-family:'Zen Kaku Gothic New',ui-sans-serif,system-ui,sans-serif;color:var(--ink);
+      background:var(--navy);min-height:100vh;line-height:1.45}
+    .mono{font-family:'Space Mono',ui-monospace,monospace}
+    .wrap{max-width:480px;margin:0 auto;padding:0 16px;min-height:100vh;display:flex;flex-direction:column}
+    .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--gold)}
+    .h1{font-size:26px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
+    .h2{font-size:18px;font-weight:800;letter-spacing:-.01em}
+    .muted{color:var(--muted)}
+    .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;
+      box-shadow:0 1px 0 rgba(0,0,0,.04)}
+    .btn{appearance:none;border:none;border-radius:11px;padding:13px 16px;font-weight:800;font-size:15px;
+      cursor:pointer;transition:transform .12s ease,filter .2s ease,background .2s ease;width:100%;
+      font-family:inherit}
+    .btn:active{transform:scale(.98)}
+    .btn-primary{background:var(--green);color:#fff}
+    .btn-navy{background:var(--navy);color:#fff}
+    .btn-ghost{background:transparent;color:var(--navy);border:1.5px solid var(--navy)}
+    .btn-seal{background:var(--seal);color:#fff}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .input{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;
+      font-family:inherit;background:#fff;color:var(--ink);transition:border-color .2s ease}
+    .input:focus{outline:none;border-color:var(--green)}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+      font-size:12px;font-weight:700;background:var(--paper2);color:var(--navy)}
+    .progress{height:10px;background:var(--paper2);border-radius:999px;overflow:hidden}
+    .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--green),#37c08a);
+      border-radius:999px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+    .codeband{font-family:'Space Mono',monospace;letter-spacing:.35em;font-size:34px;font-weight:700;
+      color:var(--navy);background:repeating-linear-gradient(90deg,#fff,#fff 2px,#f6f1e6 2px,#f6f1e6 4px);
+      border:1.5px dashed var(--line);border-radius:10px;padding:14px 10px;text-align:center}
+    .stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 8px}
+    .stmpwrap{display:flex;flex-direction:column;align-items:center;gap:5px}
+    .stmp{position:relative;width:100%;aspect-ratio:1;border-radius:14px;overflow:hidden;
+      background:radial-gradient(circle at 32% 26%,#fffdf8,#f1e9d6);border:1px solid var(--line);
+      transition:box-shadow .3s ease,transform .2s ease}
+    .stmp.on{box-shadow:inset 0 0 16px rgba(0,0,0,.05)}
+    .stmp.on:active{transform:scale(.93)}
+    .stmp .inkrot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+    .stmp .ink{width:88%;height:88%;animation:stampin .6s cubic-bezier(.2,1.55,.35,1) both}
+    .stmp svg{width:100%;height:100%;display:block}
+    .stmp-name{font-size:9px;font-weight:700;color:var(--muted);text-align:center;line-height:1.05;
+      letter-spacing:.01em;min-height:22px}
+    .stmpwrap.got .stmp-name{color:var(--navy)}
+    @keyframes stampin{0%{opacity:0;transform:scale(2.5)}55%{opacity:1}70%{transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
+    @media (prefers-reduced-motion:reduce){.stmp .ink{animation:none}}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;
+      font-size:10px;font-weight:700;color:#9fb4bd;background:none;border:none;cursor:pointer;transition:color .2s}
+    .tab.on{color:#fff}
+    .tab .dot{width:5px;height:5px;border-radius:50%;background:var(--green);opacity:0}
+    .tab.on .dot{opacity:1}
+    .nav{position:sticky;bottom:0;display:flex;background:var(--navy2);
+      border-top:1px solid rgba(255,255,255,.08);border-radius:14px 14px 0 0}
+    .flash{background:var(--seal);color:#fff;border-radius:12px;padding:12px 14px;font-weight:700;
+      font-size:13px;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(200,16,46,.5)}50%{box-shadow:0 0 0 8px rgba(200,16,46,0)}}
+    .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:#fff;
+      padding:12px 18px;border-radius:999px;font-weight:800;font-size:14px;z-index:60;
+      box-shadow:0 8px 24px rgba(0,0,0,.3);animation:rise .3s ease}
+    @keyframes rise{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+    .opt{width:100%;text-align:left;padding:14px;border:1.5px solid var(--line);border-radius:11px;
+      background:#fff;font-weight:600;font-size:15px;font-family:inherit;cursor:pointer;transition:all .15s;margin-bottom:8px}
+    .opt:hover{border-color:var(--navy)}
+    .opt.correct{border-color:var(--green);background:#e9f7f0}
+    .opt.wrong{border-color:var(--seal);background:#fbeaec}
+    .bar{display:flex;align-items:center;gap:8px;margin:6px 0}
+    .bar .track{flex:1;height:18px;background:var(--paper2);border-radius:6px;overflow:hidden}
+    .bar .track>span{display:block;height:100%;background:var(--navy);border-radius:6px;transition:width .6s}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .lb-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+    .lb-rank{width:26px;font-weight:900;font-family:'Space Mono',monospace;color:var(--navy)}
+    .timer{font-family:'Space Mono',monospace;font-size:46px;font-weight:700;text-align:center}
+    .link{color:var(--green);font-weight:700;cursor:pointer}
+    .scrn{background:var(--navy);color:#fff;min-height:100vh;padding:32px}
+    .offline{position:fixed;top:0;left:0;right:0;background:var(--gold);color:#1a1205;text-align:center;
+      font-size:11px;font-weight:800;padding:4px;z-index:80;letter-spacing:.03em}
+  `}</style>
+  );
+}
+
+function TabIcon({ name }) {
+  const p = { width: 23, height: 23, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+  switch (name) {
+    case "passport": return (<svg {...p}><rect x="5" y="3" width="14" height="18" rx="2.2" /><circle cx="12" cy="10" r="2.7" /><path d="M9.5 16h5" /></svg>);
+    case "connect": return (<svg {...p}><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3c2.6 2.8 2.6 15.2 0 18" /><path d="M12 3c-2.6 2.8-2.6 15.2 0 18" /></svg>);
+    case "quiz": return (<svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 6.6l2.3 5.4-2.3 5.4-2.3-5.4z" /><circle cx="12" cy="12" r="0.7" fill="currentColor" stroke="none" /></svg>);
+    case "learn": return (<svg {...p}><path d="M9 4 3 6.2v13.6l6-2.2 6 2.2 6-2.2V4l-6 2.2L9 4z" /><path d="M9 4v13.6" /><path d="M15 6.2v13.6" /></svg>);
+    case "missions": return (<svg {...p}><path d="M6 21V4" /><path d="M6 4.5h11l-2.6 3.2 2.6 3.2H6" /></svg>);
+    default: return null;
+  }
+}
+
+/* ============================================================================
+   APP ROOT
+============================================================================ */
+function App() {
+  const [view, setView] = useState("boot");
+  const [me, setMe] = useState(null);
+  const [inbox, setInbox] = useState([]);
+  const [tab, setTab] = useState("passport");
+  const [toast, setToast] = useState(null);
+  const [flash, setFlash] = useState(null);
+  const [online, setOnline] = useState(true);
+  const meRef = useRef(null);
+  useEffect(() => { meRef.current = me; }, [me]);
+
+  const ping = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
+
+  useEffect(() => {
+    (async () => {
+      await ensure();
+      setOnline(ONLINE);
+      const q = (typeof window !== "undefined" ? window.location.search : "") || "";
+      if (q.includes("screen")) { setView("screen"); return; }
+      if (q.includes("admin")) { setView("admin"); return; }
+      setView("landing");
+    })();
+  }, []);
+
+  const refresh = useCallback(async (myRec) => {
+    const rec = myRec || meRef.current;
+    if (!rec) return;
+    const keys = await slist("inbox:" + rec.id + ":");
+    const evs = [];
+    for (const k of keys) { const e = await sget(k); if (e) evs.push(e); }
+    setInbox(evs);
+    const fl = await sget("flash:current");
+    setFlash(fl && fl.endsAt > Date.now() ? fl : null);
+    let changed = false;
+    const cons = [...(rec.connections || [])];
+    for (const e of evs.filter((x) => x.type === "connection")) {
+      if (!cons.some((c) => c.id === e.fromId)) { cons.push({ id: e.fromId, name: e.fromName, market: e.fromMarket, in: true }); changed = true; }
+    }
+    const tri = [...(rec.triviaWith || [])];
+    for (const e of evs.filter((x) => x.type === "trivia")) {
+      if (!tri.includes(e.fromId)) { tri.push(e.fromId); changed = true; }
+    }
+    let next = rec;
+    if (changed) { next = { ...rec, connections: cons, triviaWith: tri }; }
+    next = await applyAutoAwards(next, evs);
+    setMe(next);
+    if (changed || next !== rec) await sset("users:" + next.id, next);
+    const finalTotal = (next.selfPoints || 0) + sum(evs, (e) => e.points);
+    await sset("score:" + next.id, { id: next.id, name: next.name, market: next.market, total: finalTotal, charity: next.charity || "" });
+  }, []);
+
+  useEffect(() => {
+    if (view !== "app" || !me) return;
+    refresh(me);
+    const t = setInterval(() => refresh(), 20000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line
+  }, [view, me && me.id]);
+
+  const total = (me ? me.selfPoints || 0 : 0) + sum(inbox, (e) => e.points);
+  const collected = me ? collectedMarkets(me) : [];
+
+  const offlineBar = !online ? <div className="offline">Preview mode — no backend reachable. Single device, not saved. Deploy with /api for live play.</div> : null;
+
+  if (view === "boot") return (<><Styles /><div className="gcq"><div className="wrap" style={{ justifyContent: "center", color: "#9fb4bd" }}>Loading…</div></div></>);
+  if (view === "screen") return (<><Styles /><BigScreen onExit={() => setView("landing")} /></>);
+  if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} /></>);
+  if (view === "landing") return (<><Styles />{offlineBar}<Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
+  if (view === "register") return (<><Styles />{offlineBar}<Register onDone={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
+
+  return (
+    <div className="gcq">
+      <Styles />
+      {offlineBar}
+      <div className="wrap" style={{ paddingTop: online ? 0 : 18 }}>
+        <div style={{ flex: 1, paddingTop: 16, paddingBottom: 12 }}>
+          {flash && <div className="flash" style={{ marginBottom: 14 }}>⚡ {flash.title} — {flash.desc}{flash.mult > 1 ? `  (×${flash.mult} points!)` : ""}</div>}
+          {tab === "passport" && <Passport me={me} total={total} inbox={inbox} collected={collected} ping={ping} setMe={setMe} refresh={refresh} />}
+          {tab === "connect" && <Connect me={me} flash={flash} ping={ping} setMe={setMe} refresh={refresh} collected={collected} />}
+          {tab === "quiz" && <Trivia me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+          {tab === "learn" && <Learn me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+          {tab === "missions" && <Missions me={me} total={total} ping={ping} setMe={setMe} refresh={refresh} />}
+        </div>
+        <div className="nav">
+          {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["missions", "Missions"]].map(([k, l]) => (
+            <button key={k} className={"tab" + (tab === k ? " on" : "")} onClick={() => setTab(k)}>
+              <TabIcon name={k} /><span>{l}</span><span className="dot" />
+            </button>
+          ))}
+        </div>
+      </div>
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+/* ============================================================================
+   DERIVATIONS
+============================================================================ */
+function collectedMarkets(me) {
+  const s = new Set();
+  (me.connections || []).forEach((c) => { if (c.market) s.add(c.market); });
+  return [...s];
+}
+async function applyAutoAwards(rec, evs) {
+  let next = rec;
+  const cols = collectedMarkets(next);
+  if (cols.length >= 3 && !next.trioAwarded) {
+    next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus, missions: { ...next.missions, m_3market: true } };
+  }
+  if (cols.length >= MARKETS.length && !next.fullAwarded) {
+    next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
+  }
+  return next;
+}
+
+/* ============================================================================
+   LANDING / SIGN-IN
+============================================================================ */
+function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function go() {
+    const e = email.trim().toLowerCase();
+    if (!e || !e.includes("@")) { setErr("Enter the email you registered with."); return; }
+    setBusy(true); setErr("");
+    const idx = await sget("email:" + e);
+    if (idx && idx.id) {
+      const rec = await sget("users:" + idx.id);
+      if (rec) { setBusy(false); onAuthed(rec); return; }
+    }
+    setBusy(false);
+    onRegister();
+  }
+
+  return (
+    <div className="gcq">
+      <div className="wrap" style={{ justifyContent: "center", paddingTop: 40, paddingBottom: 40 }}>
+        <div style={{ textAlign: "center", marginBottom: 8 }}>
+          <div className="eyebrow">Fidelity International · Tokyo</div>
+          <h1 className="h1" style={{ color: "#fff", margin: "10px 0 4px" }}>The Global<br />Connection Quest</h1>
+          <p style={{ color: "#9fb4bd", fontSize: 14 }}>Meet, learn, and connect across every market. Play for the charity pot.</p>
+        </div>
+        <div className="card" style={{ marginTop: 18 }}>
+          <label className="eyebrow" style={{ color: "var(--navy)" }}>Sign in or register</label>
+          <input className="input" style={{ marginTop: 8 }} placeholder="you@fil.com" value={email}
+            onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && go()} type="email" />
+          {err && <p style={{ color: "var(--seal)", fontSize: 13, marginTop: 8, fontWeight: 600 }}>{err}</p>}
+          <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={go} disabled={busy}>
+            {busy ? "Checking…" : "Continue"}
+          </button>
+          <p className="muted" style={{ fontSize: 12, marginTop: 10, textAlign: "center" }}>
+            Returning? Your email restores your passport on any device.
+          </p>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 18, justifyContent: "center" }}>
+          <span className="link" onClick={onAdmin} style={{ fontSize: 13, color: "#9fb4bd" }}>Gamesmaster access →</span>
+          <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Venue screen →</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   REGISTER
+============================================================================ */
+function Register({ onDone, onBack }) {
+  const [f, setF] = useState({ email: "", name: "", market: "", team: "", nationality: "", h1: "", h2: "", h3: "", exotic: "", goal: "", languages: "", table: "", charity: "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  const ready = f.email.includes("@") && f.name && f.market && f.nationality && f.h1 && f.h2 && f.h3 && f.exotic;
+
+  async function submit() {
+    if (!ready) { setErr("Please complete all required fields to unlock your code."); return; }
+    setBusy(true); setErr("");
+    const emailKey = "email:" + f.email.trim().toLowerCase();
+    const existing = await sget(emailKey);
+    if (existing && existing.id) {
+      const rec = await sget("users:" + existing.id);
+      if (rec) { setBusy(false); onDone(rec); return; }
+    }
+    const code = await genCode();
+    const id = uid();
+    const rec = {
+      id, code, email: f.email.trim().toLowerCase(), name: f.name.trim(), market: f.market,
+      team: f.team.trim(), nationality: f.nationality.trim(), hobbies: [f.h1.trim(), f.h2.trim(), f.h3.trim()],
+      exotic: f.exotic.trim(), goal: f.goal.trim(), languages: f.languages.trim(),
+      charity: f.charity.trim(), table: f.table.trim(), selfPoints: 0, connections: [], triviaWith: [],
+      missions: {}, japanQuiz: false, apacQuiz: false, createdAt: Date.now(),
+    };
+    await sset("users:" + id, rec);
+    await sset("code:" + code, { id, name: rec.name, market: rec.market });
+    await sset("email:" + rec.email, { id });
+    await sset("score:" + id, { id, name: rec.name, market: rec.market, total: 0, charity: rec.charity });
+    setBusy(false);
+    onDone(rec);
+  }
+
+  return (
+    <div className="gcq">
+      <div className="wrap" style={{ paddingTop: 18, paddingBottom: 30 }}>
+        <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onBack}>← Back</span>
+        <div style={{ margin: "12px 0 14px" }}>
+          <div className="eyebrow">Icebreaker Blueprint</div>
+          <h2 className="h1" style={{ color: "#fff", fontSize: 22 }}>Build your passport</h2>
+          <p style={{ color: "#9fb4bd", fontSize: 13 }}>Your answers become the questions others answer about you. Complete the essentials to unlock your Connect Code.</p>
+        </div>
+        <div className="card">
+          <Field label="Email *"><input className="input" type="email" value={f.email} onChange={set("email")} placeholder="you@fil.com" /></Field>
+          <Field label="Full name *"><input className="input" value={f.name} onChange={set("name")} placeholder="Ashleigh Tan" /></Field>
+          <Field label="Your market *">
+            <select className="input" value={f.market} onChange={set("market")}>
+              <option value="">Select…</option>
+              {MARKETS.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </Field>
+          <Field label="Team / function"><input className="input" value={f.team} onChange={set("team")} placeholder="e.g. Distribution, Investment Risk" /></Field>
+          <Field label="Nationality *"><input className="input" value={f.nationality} onChange={set("nationality")} placeholder="British" /></Field>
+          <Field label="Your 3 hobbies and interests *">
+            <div style={{ display: "grid", gap: 8 }}>
+              <input className="input" value={f.h1} onChange={set("h1")} placeholder="Skiing" />
+              <input className="input" value={f.h2} onChange={set("h2")} placeholder="Roasting coffee" />
+              <input className="input" value={f.h3} onChange={set("h3")} placeholder="Sci-fi books" />
+            </div>
+          </Field>
+          <Field label="Most exotic place you've visited *"><input className="input" value={f.exotic} onChange={set("exotic")} placeholder="Madagascar" /></Field>
+          <Field label="Languages you speak"><input className="input" value={f.languages} onChange={set("languages")} placeholder="English, Japanese" /></Field>
+          <Field label="Day 1 table number"><input className="input" value={f.table} onChange={set("table")} placeholder="e.g. 12" inputMode="numeric" /></Field>
+          <Field label="My Tokyo goal"><input className="input" value={f.goal} onChange={set("goal")} placeholder="Mastering the perfect bow" /></Field>
+          <Field label="A charity I'd nominate if I win"><input className="input" value={f.charity} onChange={set("charity")} placeholder="e.g. Médecins Sans Frontières" /></Field>
+          {err && <p style={{ color: "var(--seal)", fontSize: 13, fontWeight: 600 }}>{err}</p>}
+          <button className="btn btn-primary" style={{ marginTop: 6 }} onClick={submit} disabled={busy || !ready}>
+            {busy ? "Creating passport…" : "Unlock my Connect Code"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Field({ label, children }) {
+  return (<div style={{ marginBottom: 12 }}><label className="eyebrow" style={{ color: "var(--navy)", display: "block", marginBottom: 6 }}>{label}</label>{children}</div>);
+}
+
+/* ---- Passport stamp visuals ---------------------------------------------- */
+function octagon(cx, cy, r) {
+  const p = [];
+  for (let k = 0; k < 8; k++) { const a = Math.PI / 8 + k * Math.PI / 4; p.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`); }
+  return p.join(" ");
+}
+function StampSVG({ market, idx, color }) {
+  const code = codeFor(market);
+  const shape = idx % 4;
+  const glyph = GLYPHS[idx % GLYPHS.length];
+  const ring = (sw) => {
+    const r1 = 44, r2 = 36;
+    if (shape === 0) return (<><circle cx="50" cy="50" r={r1} fill="none" stroke={color} strokeWidth={sw} /><circle cx="50" cy="50" r={r2} fill="none" stroke={color} strokeWidth={sw * 0.7} /></>);
+    if (shape === 1) { const a = 50 - r1, b = 2 * r1, c = 50 - r2, d = 2 * r2; return (<><rect x={a} y={a} width={b} height={b} rx="14" fill="none" stroke={color} strokeWidth={sw} /><rect x={c} y={c} width={d} height={d} rx="10" fill="none" stroke={color} strokeWidth={sw * 0.7} /></>); }
+    if (shape === 2) return (<><ellipse cx="50" cy="50" rx={r1} ry={r1 * 0.8} fill="none" stroke={color} strokeWidth={sw} /><ellipse cx="50" cy="50" rx={r2} ry={r2 * 0.8} fill="none" stroke={color} strokeWidth={sw * 0.7} /></>);
+    return (<><polygon points={octagon(50, 50, r1)} fill="none" stroke={color} strokeWidth={sw} /><polygon points={octagon(50, 50, r2)} fill="none" stroke={color} strokeWidth={sw * 0.7} /></>);
+  };
+  return (
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <g style={{ opacity: 0.92 }}>
+        {ring(2.6)}
+        <text x="50" y="30" textAnchor="middle" fontSize="11" fill={color}>{glyph}</text>
+        <text x="50" y="60" textAnchor="middle" fontSize="23" fontWeight="700" fill={color} fontFamily="'Space Mono',monospace" letterSpacing="1">{code}</text>
+        <text x="50" y="76" textAnchor="middle" fontSize="8" fill={color} fontFamily="'Space Mono',monospace" letterSpacing="1.5">TOKYO &#8217;26</text>
+      </g>
+    </svg>
+  );
+}
+function LockedSVG({ market }) {
+  const code = codeFor(market);
+  return (
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" strokeWidth="2" strokeDasharray="3 5" />
+      <text x="50" y="58" textAnchor="middle" fontSize="20" fontWeight="700" fill="#c9bd9f" fontFamily="'Space Mono',monospace" letterSpacing="1">{code}</text>
+    </svg>
+  );
+}
+function Stamp({ market, idx, on }) {
+  const rot = ((idx * 37) % 19) - 9;
+  const color = INK[idx % INK.length];
+  return (
+    <div className={"stmpwrap" + (on ? " got" : "")}>
+      <div className={"stmp" + (on ? " on" : " locked")}>
+        {on
+          ? <div className="inkrot" style={{ transform: `rotate(${rot}deg)` }}><div className="ink"><StampSVG market={market} idx={idx} color={color} /></div></div>
+          : <div className="inkrot"><div style={{ width: "82%", height: "82%", opacity: 0.6 }}><LockedSVG market={market} /></div></div>}
+      </div>
+      <span className="stmp-name">{market}</span>
+    </div>
+  );
+}
+function ProgressRing({ pct }) {
+  const r = 26, c = 2 * Math.PI * r;
+  return (
+    <svg width="64" height="64" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r={r} fill="none" stroke="var(--paper2)" strokeWidth="7" />
+      <circle cx="32" cy="32" r={r} fill="none" stroke="var(--green)" strokeWidth="7" strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} transform="rotate(-90 32 32)"
+        style={{ transition: "stroke-dashoffset .7s ease" }} />
+      <text x="32" y="37" textAnchor="middle" fontSize="16" fontWeight="800" fill="var(--navy)">{Math.round(pct)}%</text>
+    </svg>
+  );
+}
+function travelLabel(n) {
+  if (n === 0) return "Passport unstamped";
+  if (n <= 3) return "Just landed";
+  if (n <= 7) return "Frequent flyer";
+  if (n <= 11) return "Seasoned traveller";
+  if (n < 16) return "Globetrotter";
+  return "Around the world!";
+}
+
+/* ============================================================================
+   PASSPORT
+============================================================================ */
+function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
+  const rank = rankFor(total);
+  const nx = nextRank(total);
+  const pct = nx ? Math.min(100, Math.round(((total - rank.min) / (nx.min - rank.min)) * 100)) : 100;
+
+  return (
+    <div>
+      <div className="eyebrow">My Passport</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 2 }}>{me.name}</h2>
+      <p style={{ color: "#9fb4bd", fontSize: 13, marginBottom: 12 }}>{me.market}{me.team ? ` · ${me.team}` : ""}</p>
+
+      <div className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div className="eyebrow" style={{ color: "var(--navy)" }}>Total points</div>
+            <div style={{ fontSize: 40, fontWeight: 900, color: "var(--navy)", lineHeight: 1 }}>{total}</div>
+          </div>
+          <span className="pill">{rank.name}</span>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <div className="progress"><span style={{ width: pct + "%" }} /></div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{nx ? `${nx.min - total} pts to ${nx.name}` : "Top rank reached — Global Citizen!"}</p>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 12, textAlign: "center" }}>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Your Connect Code</div>
+        <div className="codeband" style={{ marginTop: 8 }}>{me.code}</div>
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>Share this so peers can connect with you. Each person scores you once.</p>
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div>
+            <div className="eyebrow" style={{ color: "var(--navy)" }}>Passport stamps</div>
+            <div style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)", lineHeight: 1.05 }}>
+              {collected.length}<span style={{ fontSize: 16, color: "var(--muted)", fontWeight: 700 }}> / {MARKETS.length}</span>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)" }}>{travelLabel(collected.length)}</div>
+          </div>
+          <ProgressRing pct={(collected.length / MARKETS.length) * 100} />
+        </div>
+        <div className="stamps" style={{ marginTop: 14 }}>
+          {MARKETS.map((m, i) => <Stamp key={m} market={m} idx={i} on={collected.includes(m)} />)}
+        </div>
+        {collected.length >= MARKETS.length
+          ? <p style={{ color: "var(--green)", fontWeight: 800, fontSize: 13, marginTop: 12, textAlign: "center" }}>★ Full passport — {PTS.fullPassport} bonus pts awarded!</p>
+          : <p className="muted" style={{ fontSize: 12, marginTop: 12, textAlign: "center" }}>Meet someone from a market to ink its stamp. Each new market is worth +{PTS.newMarket}.</p>}
+      </div>
+
+      {(me.team || me.table) && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 20 }}>
+            {me.table && (<div><div className="eyebrow" style={{ color: "var(--navy)" }}>Day 1 table</div><p style={{ fontWeight: 800, fontSize: 22, color: "var(--navy)", marginTop: 2 }}>{me.table}</p></div>)}
+            {me.team && (<div><div className="eyebrow" style={{ color: "var(--navy)" }}>Team</div><p style={{ fontWeight: 700, fontSize: 15, marginTop: 6 }}>{me.team}</p></div>)}
+          </div>
+        </div>
+      )}
+
+      {me.charity && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <div className="eyebrow" style={{ color: "var(--navy)" }}>Playing for</div>
+          <p style={{ fontWeight: 700, marginTop: 4 }}>{me.charity}</p>
+          <p className="muted" style={{ fontSize: 12 }}>The overall winner directs the charity pot to their nominated cause.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================================
+   CONNECT
+============================================================================ */
+function Connect({ me, flash, ping, setMe, refresh, collected }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [match, setMatch] = useState(null);
+
+  async function connect() {
+    const c = code.trim();
+    if (!/^\d{4}$/.test(c)) { ping("Enter a 4-digit code"); return; }
+    if (c === me.code) { ping("That's your own code!"); return; }
+    setBusy(true);
+    const idx = await sget("code:" + c);
+    if (!idx) { setBusy(false); ping("Code not found"); return; }
+    if ((me.connections || []).some((x) => x.id === idx.id)) { setBusy(false); ping("Already connected with " + idx.name); setCode(""); return; }
+
+    const mult = flash && flash.mult > 1 ? flash.mult : 1;
+    const isNewMarket = !collected.includes(idx.market) && idx.market !== me.market;
+    let earned = PTS.connect + (isNewMarket ? PTS.newMarket : 0);
+    earned = earned * mult;
+
+    const next = {
+      ...me,
+      selfPoints: (me.selfPoints || 0) + earned,
+      connections: [...(me.connections || []), { id: idx.id, name: idx.name, market: idx.market }],
+      missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
+    };
+    setMe(next); await sset("users:" + me.id, next);
+    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
+    await sset("inbox:" + idx.id + ":" + ev.id, ev);
+    setBusy(false); setCode("");
+    ping(`+${earned} — connected with ${idx.name}!`);
+    refresh(next);
+  }
+
+  async function findMatch() {
+    const keys = await slist("users:");
+    const pool = [];
+    for (const k of keys) { const u = await sget(k); if (u && u.id !== me.id && !(me.connections || []).some((c) => c.id === u.id)) pool.push(u); }
+    if (!pool.length) { ping("No new people to match yet"); return; }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    setMatch(pick);
+  }
+
+  return (
+    <div>
+      <div className="eyebrow">Connect</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Meet someone new</h2>
+
+      <div className="card">
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Enter a peer's Connect Code</div>
+        <input className="input mono" style={{ marginTop: 8, fontSize: 22, letterSpacing: ".3em", textAlign: "center" }}
+          value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          placeholder="0000" inputMode="numeric" />
+        <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={connect} disabled={busy}>
+          {busy ? "Connecting…" : "Connect & score"}
+        </button>
+        <p className="muted" style={{ fontSize: 12, marginTop: 8, textAlign: "center" }}>
+          +{PTS.connect} each · +{PTS.newMarket} extra if they're a new market{flash && flash.mult > 1 ? ` · ×${flash.mult} flash bonus live!` : ""}
+        </p>
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Random match</div>
+        <p className="muted" style={{ fontSize: 13, margin: "4px 0 10px" }}>Get paired with a colleague you haven't met, then go find them.</p>
+        <button className="btn btn-ghost" onClick={findMatch}>Find me a match</button>
+        {match && (
+          <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+            <p style={{ fontWeight: 800, fontSize: 17 }}>{match.name}</p>
+            <p className="muted" style={{ fontSize: 13 }}>{match.market}{match.nationality ? ` · ${match.nationality}` : ""}</p>
+            {match.hobbies && <p style={{ fontSize: 13, marginTop: 6 }}>Ask them about: <b>{match.hobbies.filter(Boolean)[0]}</b></p>}
+            <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Find them, swap codes, and connect above.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>People you've met ({(me.connections || []).length})</div>
+        {(me.connections || []).length === 0
+          ? <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>No connections yet — go say hello.</p>
+          : <div style={{ marginTop: 8 }}>{(me.connections || []).map((c, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--line)", fontSize: 14 }}>
+                <span style={{ fontWeight: 600 }}>{c.name}</span><span className="pill">{c.market}</span>
+              </div>))}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   TRIVIA
+============================================================================ */
+function Trivia({ me, ping, setMe, refresh }) {
+  const [stage, setStage] = useState("intro");
+  const [peer, setPeer] = useState(null);
+  const [code, setCode] = useState("");
+  const [qs, setQs] = useState([]);
+  const [qi, setQi] = useState(0);
+  const [correct, setCorrect] = useState(0);
+  const [picked, setPicked] = useState(null);
+  const [time, setTime] = useState(60);
+  const tref = useRef(null);
+  const correctRef = useRef(0);
+
+  function buildQuestions() {
+    const hobbyPool = ["Skiing", "Cycling", "Painting", "Gardening", "Chess", "Running", "Baking", "Photography", "Yoga", "Surfing"];
+    const realHobby = (me.hobbies || []).filter(Boolean)[0] || "Reading";
+    const hobbyOpts = shuffle([realHobby, ...pickN(hobbyPool.filter((h) => h !== realHobby), 2)]);
+    const placeOpts = shuffle([me.exotic || "Iceland", ...pickN(PLACE_POOL.filter((p) => p !== me.exotic), 2)]);
+    const marketOpts = shuffle([me.market, ...pickN(MARKETS.filter((m) => m !== me.market), 2)]);
+    return [
+      { q: `Which hobby belongs to ${me.name}?`, options: hobbyOpts, a: hobbyOpts.indexOf(realHobby) },
+      { q: `Where is the most exotic place ${me.name} has visited?`, options: placeOpts, a: placeOpts.indexOf(me.exotic || "Iceland") },
+      { q: `Which is ${me.name}'s home market?`, options: marketOpts, a: marketOpts.indexOf(me.market) },
+    ];
+  }
+
+  async function lockPeer() {
+    const c = code.trim();
+    if (!/^\d{4}$/.test(c) || c === me.code) { ping("Enter a valid peer code"); return; }
+    const idx = await sget("code:" + c);
+    if (!idx) { ping("Code not found"); return; }
+    if ((me.triviaWith || []).includes(idx.id)) { ping("Already quizzed " + idx.name); return; }
+    setPeer(idx); setQs(buildQuestions()); setStage("run"); setQi(0); setCorrect(0); correctRef.current = 0; setTime(60);
+  }
+
+  useEffect(() => {
+    if (stage !== "run") return;
+    tref.current = setInterval(() => setTime((t) => { if (t <= 1) { clearInterval(tref.current); finish(correctRef.current); return 0; } return t - 1; }), 1000);
+    return () => clearInterval(tref.current);
+    // eslint-disable-next-line
+  }, [stage]);
+
+  function answer(i) {
+    if (picked !== null) return;
+    setPicked(i);
+    const ok = i === qs[qi].a;
+    const nc = correct + (ok ? 1 : 0);
+    if (ok) setCorrect(nc);
+    correctRef.current = nc;
+    setTimeout(() => {
+      setPicked(null);
+      if (qi + 1 < qs.length) setQi(qi + 1);
+      else { clearInterval(tref.current); finish(nc); }
+    }, 900);
+  }
+
+  async function finish(nc) {
+    setStage("done");
+    const hostPts = PTS.triviaHost;
+    const guesserPts = nc * PTS.triviaCorrect;
+    const next = { ...me, selfPoints: (me.selfPoints || 0) + hostPts, triviaWith: [...(me.triviaWith || []), peer.id], missions: { ...me.missions, m_trivia: true } };
+    setMe(next); await sset("users:" + me.id, next);
+    if (guesserPts > 0) {
+      const ev = { id: eid(), type: "trivia", points: guesserPts, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
+      await sset("inbox:" + peer.id + ":" + ev.id, ev);
+    }
+    refresh(next);
+  }
+
+  if (stage === "intro") return (
+    <div>
+      <div className="eyebrow">Peer Pop Quiz</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Challenge a peer</h2>
+      <div className="card">
+        <p style={{ fontSize: 14 }}>Generate a 60-second, 3-question quiz about <b>you</b>, then hand your phone to a new contact. They answer against the clock.</p>
+        <div style={{ background: "var(--paper2)", borderRadius: 10, padding: 12, margin: "12px 0", fontSize: 13 }}>
+          <b>Scoring</b><br />+{PTS.triviaCorrect} to your guesser per correct answer<br />+{PTS.triviaHost} to you for starting the connection
+        </div>
+        <button className="btn btn-primary" onClick={() => setStage("code")}>Start a quiz</button>
+      </div>
+    </div>
+  );
+
+  if (stage === "code") return (
+    <div>
+      <div className="eyebrow">Peer Pop Quiz</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Who's playing?</h2>
+      <div className="card">
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Enter your guesser's Connect Code</div>
+        <input className="input mono" style={{ marginTop: 8, fontSize: 22, letterSpacing: ".3em", textAlign: "center" }}
+          value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="0000" inputMode="numeric" />
+        <button className="btn btn-primary" style={{ marginTop: 10 }} onClick={lockPeer}>Generate quiz & hand over phone</button>
+        <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setStage("intro")}>Cancel</button>
+      </div>
+    </div>
+  );
+
+  if (stage === "run") {
+    const q = qs[qi];
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <span className="pill">Question {qi + 1}/3</span>
+          <span className="timer" style={{ color: time <= 10 ? "var(--seal)" : "#fff", fontSize: 30 }}>{time}s</span>
+        </div>
+        <div className="card">
+          <p style={{ fontWeight: 800, fontSize: 18, marginBottom: 14 }}>{q.q}</p>
+          {q.options.map((o, i) => (
+            <button key={i} className={"opt" + (picked !== null && i === q.a ? " correct" : picked === i && i !== q.a ? " wrong" : "")}
+              onClick={() => answer(i)}>{o}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="eyebrow">Peer Pop Quiz</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Time!</h2>
+      <div className="card" style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 48 }}>{correct === 3 ? "🏆" : correct >= 1 ? "🎉" : "🤝"}</div>
+        <p style={{ fontWeight: 800, fontSize: 20, margin: "8px 0" }}>{correct}/3 correct</p>
+        <p className="muted" style={{ fontSize: 14 }}>{peer && peer.name} earned +{correct * PTS.triviaCorrect}. You earned +{PTS.triviaHost} for connecting.</p>
+        <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => { setStage("intro"); setCode(""); setPeer(null); }}>Quiz someone else</button>
+      </div>
+    </div>
+  );
+}
+function shuffle(a) { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; }
+function pickN(a, n) { return shuffle(a).slice(0, n); }
+
+/* ============================================================================
+   LEARN
+============================================================================ */
+function Learn({ me, ping, setMe, refresh }) {
+  const [sub, setSub] = useState("ice");
+  return (
+    <div>
+      <div className="eyebrow">Learn & prepare</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Study up</h2>
+      <div className="grid2" style={{ marginBottom: 12 }}>
+        {[["ice", "Dinner icebreakers"], ["japan", "Did You Know? Japan"], ["apac", "APAC fast facts"], ["jq", "Take the quizzes"]].map(([k, l]) => (
+          <button key={k} className={"btn " + (sub === k ? "btn-navy" : "btn-ghost")} style={{ fontSize: 13, padding: "11px 8px" }} onClick={() => setSub(k)}>{l}</button>
+        ))}
+      </div>
+      {sub === "ice" && <Icebreakers />}
+      {sub === "japan" && <JapanFacts />}
+      {sub === "apac" && <ApacFacts />}
+      {sub === "jq" && <Quizzes me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+    </div>
+  );
+}
+function Icebreakers() {
+  const [i, setI] = useState(0);
+  return (
+    <div className="card">
+      <div className="eyebrow" style={{ color: "var(--navy)" }}>Conversation starter {i + 1}/{ICEBREAKERS.length}</div>
+      <p style={{ fontSize: 19, fontWeight: 700, margin: "14px 0", lineHeight: 1.35 }}>{ICEBREAKERS[i]}</p>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn btn-ghost" onClick={() => setI((i - 1 + ICEBREAKERS.length) % ICEBREAKERS.length)}>Previous</button>
+        <button className="btn btn-navy" onClick={() => setI((i + 1) % ICEBREAKERS.length)}>Next</button>
+      </div>
+      <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setI(Math.floor(Math.random() * ICEBREAKERS.length))}>Surprise me</button>
+    </div>
+  );
+}
+function JapanFacts() {
+  return (
+    <div>
+      {JAPAN_FACTS.map((f, i) => (
+        <div className="card" key={i} style={{ marginBottom: 10 }}>
+          <p style={{ fontWeight: 800 }}>{f.t}</p>
+          <p style={{ fontSize: 14, marginTop: 4 }} className="muted">{f.d}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+function ApacFacts() {
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 10, borderColor: "var(--gold)" }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)" }}>⚠ Placeholder content — replace APAC_FACTS in the code with your real market data before the event.</p>
+      </div>
+      {Object.entries(APAC_FACTS).map(([m, facts]) => (
+        <div className="card" key={m} style={{ marginBottom: 10 }}>
+          <div className="pill" style={{ marginBottom: 8 }}>{m}</div>
+          {facts.map((x, i) => <p key={i} style={{ fontSize: 14, marginBottom: 4 }}>• {x}</p>)}
+        </div>
+      ))}
+    </div>
+  );
+}
+function Quizzes({ me, ping, setMe, refresh }) {
+  return (
+    <div>
+      <SelfQuiz title="Did You Know? Japan" questions={JAPAN_QUIZ} done={me.japanQuiz}
+        onComplete={async (score) => {
+          const pts = score * 20;
+          const next = { ...me, japanQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_learn: true } };
+          setMe(next); await sset("users:" + me.id, next); ping(`+${pts} from the Japan quiz`); refresh(next);
+        }} ping={ping} />
+      <SelfQuiz title="APAC Fast Facts" questions={APAC_QUIZ} done={me.apacQuiz}
+        onComplete={async (score) => {
+          const pts = score * 20;
+          const next = { ...me, apacQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_apac: true } };
+          setMe(next); await sset("users:" + me.id, next); ping(`+${pts} from the APAC quiz`); refresh(next);
+        }} ping={ping} />
+    </div>
+  );
+}
+function SelfQuiz({ title, questions, done, onComplete, ping }) {
+  const [open, setOpen] = useState(false);
+  const [qi, setQi] = useState(0);
+  const [score, setScore] = useState(0);
+  const [picked, setPicked] = useState(null);
+  function answer(i) {
+    if (picked !== null) return;
+    setPicked(i);
+    const ok = i === questions[qi].a;
+    const ns = score + (ok ? 1 : 0);
+    if (ok) setScore(ns);
+    setTimeout(() => {
+      setPicked(null);
+      if (qi + 1 < questions.length) setQi(qi + 1);
+      else { onComplete(ns); setOpen(false); setQi(0); setScore(0); }
+    }, 800);
+  }
+  return (
+    <div className="card" style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <p style={{ fontWeight: 800 }}>{title}</p>
+        {done ? <span className="pill" style={{ background: "#e9f7f0", color: "var(--green)" }}>Completed ✓</span>
+          : <button className="btn btn-primary" style={{ width: "auto", padding: "8px 14px", fontSize: 13 }} onClick={() => setOpen(true)}>Start</button>}
+      </div>
+      {open && (
+        <div style={{ marginTop: 12 }}>
+          <div className="eyebrow" style={{ color: "var(--navy)" }}>Question {qi + 1}/{questions.length}</div>
+          <p style={{ fontWeight: 700, margin: "8px 0 10px" }}>{questions[qi].q}</p>
+          {questions[qi].options.map((o, i) => (
+            <button key={i} className={"opt" + (picked !== null && i === questions[qi].a ? " correct" : picked === i ? " wrong" : "")} onClick={() => answer(i)}>{o}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================================
+   MISSIONS
+============================================================================ */
+function Missions({ me, total, ping, setMe, refresh }) {
+  const doneCount = MISSIONS.filter((m) => me.missions && me.missions[m.id]).length;
+  async function toggle(m) {
+    if (me.missions && me.missions[m.id]) return;
+    if (m.auto) { ping("This one completes automatically when you do it in the app."); return; }
+    const next = { ...me, selfPoints: (me.selfPoints || 0) + m.pts, missions: { ...me.missions, [m.id]: true } };
+    setMe(next); await sset("users:" + me.id, next); ping(`+${m.pts} — ${m.label}`); refresh(next);
+  }
+  return (
+    <div>
+      <div className="eyebrow">Missions</div>
+      <h2 className="h1" style={{ color: "#fff", marginBottom: 4 }}>Your challenges</h2>
+      <p style={{ color: "#9fb4bd", fontSize: 13, marginBottom: 12 }}>{doneCount}/{MISSIONS.length} complete</p>
+      <div className="card">
+        <div className="progress" style={{ marginBottom: 14 }}><span style={{ width: Math.round((doneCount / MISSIONS.length) * 100) + "%" }} /></div>
+        {MISSIONS.map((m) => {
+          const on = me.missions && me.missions[m.id];
+          return (
+            <div key={m.id} onClick={() => toggle(m)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0", borderBottom: "1px solid var(--line)", cursor: on ? "default" : "pointer" }}>
+              <div style={{ width: 24, height: 24, borderRadius: 7, border: "2px solid " + (on ? "var(--green)" : "var(--line)"), background: on ? "var(--green)" : "#fff", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, transition: "all .25s", flexShrink: 0 }}>{on ? "✓" : ""}</div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, textDecoration: on ? "line-through" : "none", opacity: on ? .6 : 1 }}>{m.label}</p>
+              </div>
+              <span className="pill">+{m.pts}</span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="muted" style={{ fontSize: 12, marginTop: 10, color: "#9fb4bd" }}>Tip: missions marked auto complete themselves when you act in the app (connecting, quizzing, learning).</p>
+    </div>
+  );
+}
+
+/* ============================================================================
+   BIG SCREEN — venue leaderboard. Open with ?screen
+============================================================================ */
+function BigScreen({ onExit }) {
+  const [rows, setRows] = useState([]);
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    async function load() {
+      const keys = await slist("score:");
+      const all = [];
+      for (const k of keys) { const s = await sget(k); if (s) all.push(s); }
+      all.sort((a, b) => b.total - a.total);
+      setRows(all.slice(0, 12)); setCount(all.length);
+    }
+    load(); const t = setInterval(load, 12000); return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="scrn">
+      {onExit && <span className="link" onClick={onExit} style={{ position: "fixed", top: 14, right: 18, color: "#6f8893", fontSize: 13 }}>Exit</span>}
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div className="eyebrow" style={{ color: "var(--gold)" }}>Fidelity International · Tokyo</div>
+        <h1 style={{ fontSize: 44, fontWeight: 900, margin: "6px 0 2px" }}>Global Connection Quest</h1>
+        <p style={{ color: "#9fb4bd", fontSize: 18, marginBottom: 24 }}>Live leaderboard · {count} explorers in play</p>
+        {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
+        {rows.map((r, i) => (
+          <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 20, padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,.1)" }}>
+            <span style={{ width: 50, fontFamily: "'Space Mono',monospace", fontWeight: 700, fontSize: 28, color: i < 3 ? "var(--gold)" : "#6f8893" }}>{i + 1}</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 24, fontWeight: 800 }}>{r.name}</span>
+              <span style={{ marginLeft: 12, color: "#9fb4bd", fontSize: 16 }}>{r.market}</span>
+            </div>
+            <span style={{ fontSize: 30, fontWeight: 900, fontFamily: "'Space Mono',monospace" }}>{r.total}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   ADMIN / GAMESMASTER — open with ?admin
+============================================================================ */
+function Admin({ onExit }) {
+  const [ok, setOk] = useState(false);
+  const [pin, setPin] = useState("");
+  if (!ok) return (
+    <div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}>
+      <div className="card">
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Gamesmaster access</div>
+        <input className="input" style={{ marginTop: 10 }} type="password" placeholder="PIN" value={pin}
+          onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === "Enter" && setOk(pin === ADMIN_PIN)} />
+        <button className="btn btn-navy" style={{ marginTop: 10 }} onClick={() => setOk(pin === ADMIN_PIN)}>Enter</button>
+        <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={onExit}>Back</button>
+      </div>
+    </div></div>
+  );
+  return <AdminPanel onExit={onExit} />;
+}
+
+function AdminPanel({ onExit }) {
+  const [users, setUsers] = useState([]);
+  const [scores, setScores] = useState([]);
+  const [flash, setFlashState] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [search, setSearch] = useState("");
+  const [boost, setBoost] = useState({ code: "", pts: "50", reason: "" });
+
+  const load = useCallback(async () => {
+    const uk = await slist("users:"); const us = [];
+    for (const k of uk) { const u = await sget(k); if (u) us.push(u); }
+    setUsers(us);
+    const sk = await slist("score:"); const ss = [];
+    for (const k of sk) { const s = await sget(k); if (s) ss.push(s); }
+    ss.sort((a, b) => b.total - a.total); setScores(ss);
+    const fl = await sget("flash:current"); setFlashState(fl && fl.endsAt > Date.now() ? fl : null);
+  }, []);
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
+
+  const dist = {};
+  scores.forEach((s) => { dist[s.market] = (dist[s.market] || 0) + 1; });
+  const maxd = Math.max(1, ...Object.values(dist));
+
+  async function trigger(title, desc, mult, mins) {
+    const f = { id: eid(), title, desc, mult, endsAt: Date.now() + mins * 60000 };
+    await sset("flash:current", f); setFlashState(f); flashMsg(`Flash live: ${title}`);
+  }
+  async function stopFlash() { await sset("flash:current", null); setFlashState(null); flashMsg("Flash stopped"); }
+  function flashMsg(m) { setMsg(m); setTimeout(() => setMsg(""), 2500); }
+
+  async function giveBoost() {
+    const c = boost.code.trim(); const p = parseInt(boost.pts, 10);
+    if (!/^\d{4}$/.test(c) || !p) { flashMsg("Enter a valid code and points"); return; }
+    const idx = await sget("code:" + c);
+    if (!idx) { flashMsg("Code not found"); return; }
+    const ev = { id: eid(), type: "boost", points: p, fromId: "gamesmaster", fromName: "Gamesmaster", fromMarket: "", reason: boost.reason, ts: Date.now() };
+    await sset("inbox:" + idx.id + ":" + ev.id, ev);
+    flashMsg(`+${p} to ${idx.name}`); setBoost({ code: "", pts: "50", reason: "" }); load();
+  }
+
+  async function adjust(u, delta) {
+    const next = { ...u, selfPoints: (u.selfPoints || 0) + delta };
+    await sset("users:" + u.id, next);
+    const ik = await slist("inbox:" + u.id + ":"); let inb = 0;
+    for (const k of ik) { const e = await sget(k); if (e) inb += e.points; }
+    await sset("score:" + u.id, { id: u.id, name: u.name, market: u.market, total: (next.selfPoints || 0) + inb, charity: u.charity || "" });
+    flashMsg(`Adjusted ${u.name} by ${delta > 0 ? "+" : ""}${delta}`); load();
+  }
+
+  const filtered = search ? users.filter((u) => (u.name + " " + u.email).toLowerCase().includes(search.toLowerCase())) : [];
+
+  return (
+    <div className="gcq"><div className="wrap" style={{ paddingTop: 16, paddingBottom: 30 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <h2 className="h1" style={{ color: "#fff", fontSize: 22 }}>Gamesmaster</h2>
+        <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>Exit</span>
+      </div>
+      {msg && <div className="flash" style={{ marginBottom: 12, background: "var(--green)" }}>{msg}</div>}
+
+      <div className="grid2" style={{ marginBottom: 12 }}>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 34, fontWeight: 900, color: "var(--navy)" }}>{users.length}</div>
+          <div className="eyebrow" style={{ color: "var(--navy)" }}>Registered</div>
+        </div>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 34, fontWeight: 900, color: "var(--navy)" }}>{Object.keys(dist).length}</div>
+          <div className="eyebrow" style={{ color: "var(--navy)" }}>Markets active</div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Market distribution</div>
+        {Object.entries(dist).sort((a, b) => b[1] - a[1]).map(([m, n]) => (
+          <div className="bar" key={m}>
+            <span style={{ width: 86, fontSize: 12, fontWeight: 700 }}>{m}</span>
+            <div className="track"><span style={{ width: (n / maxd * 100) + "%" }} /></div>
+            <span style={{ width: 22, fontSize: 12, fontWeight: 700, textAlign: "right" }}>{n}</span>
+          </div>
+        ))}
+        {Object.keys(dist).length === 0 && <p className="muted" style={{ fontSize: 13 }}>No registrations yet.</p>}
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Top 10</div>
+        {scores.slice(0, 10).map((s, i) => (
+          <div className="lb-row" key={s.id}>
+            <span className="lb-rank">{i + 1}</span>
+            <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>{s.name}</span>
+            <span className="pill">{s.market}</span>
+            <span style={{ fontWeight: 900, fontFamily: "'Space Mono',monospace", width: 48, textAlign: "right" }}>{s.total}</span>
+          </div>
+        ))}
+        {scores.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No scores yet.</p>}
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Award points in person (Etiquette boost)</div>
+        <input className="input" style={{ marginBottom: 8 }} placeholder="Attendee's 4-digit code" value={boost.code} inputMode="numeric"
+          onChange={(e) => setBoost({ ...boost, code: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <input className="input" style={{ width: 90 }} placeholder="Pts" value={boost.pts} inputMode="numeric" onChange={(e) => setBoost({ ...boost, pts: e.target.value.replace(/\D/g, "") })} />
+          <input className="input" placeholder="Reason (optional)" value={boost.reason} onChange={(e) => setBoost({ ...boost, reason: e.target.value })} />
+        </div>
+        <button className="btn btn-seal" onClick={giveBoost}>Award points</button>
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Flash challenge engine</div>
+        {flash && <div className="flash" style={{ marginBottom: 10 }}>Live: {flash.title} (ends in {Math.max(0, Math.round((flash.endsAt - Date.now()) / 60000))} min) <span className="link" style={{ color: "#fff", textDecoration: "underline" }} onClick={stopFlash}>Stop</span></div>}
+        <button className="btn btn-navy" style={{ marginBottom: 8 }} onClick={() => trigger("Lunch Shuffle", "Double points for connecting with someone whose name starts with a different letter than yours.", 2, 15)}>Lunch Shuffle (×2, 15 min)</button>
+        <button className="btn btn-navy" style={{ marginBottom: 8 }} onClick={() => trigger("Hobby Match", "Find someone who shares a hobby category and connect for bonus points.", 2, 10)}>Hobby Match (×2, 10 min)</button>
+        <button className="btn btn-navy" onClick={() => trigger("Power Hour", "Every connection counts double across the room.", 2, 20)}>Power Hour (×2, 20 min)</button>
+      </div>
+
+      <div className="card">
+        <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Account recovery & point adjustment</div>
+        <input className="input" placeholder="Search by name or email" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div style={{ marginTop: 10 }}>
+          {filtered.map((u) => {
+            const total = (u.selfPoints || 0);
+            return (
+              <div key={u.id} style={{ borderTop: "1px solid var(--line)", paddingTop: 10, marginTop: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div><p style={{ fontWeight: 800 }}>{u.name}</p><p className="muted" style={{ fontSize: 12 }}>{u.email} · {u.market}{u.team ? ` · ${u.team}` : ""}{u.table ? ` · Table ${u.table}` : ""}</p></div>
+                  <div style={{ textAlign: "right" }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)" }}>{u.code}</div><p className="muted" style={{ fontSize: 11 }}>Connect code</p></div>
+                </div>
+                <p style={{ fontSize: 13, margin: "6px 0" }}>Self points: <b>{total}</b> <span className="muted">(inbound credits add on top)</span></p>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="btn btn-ghost" style={{ padding: "8px", fontSize: 13 }} onClick={() => adjust(u, 50)}>+50</button>
+                  <button className="btn btn-ghost" style={{ padding: "8px", fontSize: 13 }} onClick={() => adjust(u, -50)}>−50</button>
+                  <button className="btn btn-ghost" style={{ padding: "8px", fontSize: 13 }} onClick={() => adjust(u, 10)}>+10</button>
+                </div>
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Phone died? They simply sign in again with <b>{u.email}</b> to restore this passport and code.</p>
+              </div>
+            );
+          })}
+          {search && filtered.length === 0 && <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>No match.</p>}
+        </div>
+      </div>
+    </div></div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
