@@ -37,6 +37,22 @@ export default async (req) => {
       return json({ keys: blobs.map((b) => b.key) });
     }
 
+    if (path === "delete" && req.method === "POST") {
+      const { key } = await req.json();
+      if (!key) return json({ error: "key required" }, 400);
+      await store.delete(key);
+      return json({ ok: true });
+    }
+
+    if (path === "clear" && req.method === "POST") {
+      const { prefix } = await req.json();
+      if (!prefix) return json({ error: "prefix required" }, 400);
+      const { blobs } = await store.list({ prefix });
+      let n = 0;
+      for (const b of blobs) { await store.delete(b.key); n++; }
+      return json({ ok: true, deleted: n });
+    }
+
     return json({ error: "not found" }, 404);
   } catch (e) {
     return json({ error: String(e) }, 500);
