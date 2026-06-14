@@ -26,6 +26,7 @@ const MARKETS = [
 ];
 
 const ADMIN_PIN = "tokyo2026"; // change before the event
+const SCREEN_CLASSIC = false; // set true to revert the venue screen (?screen) to Ash's classic leaderboard
 
 // 3-letter codes shown on each passport stamp
 const CODES = {
@@ -228,6 +229,7 @@ async function sget(k){try{const r=await sbFetch("/rest/v1/kv?select=value&key=e
 async function sset(k,v){try{const r=await sbFetch("/rest/v1/kv",{method:"POST",headers:sbHeaders({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key:k,value:v})});return r.ok;}catch{return false;}}
 async function slist(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=key&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows)out.push(x.key);if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
 async function sgetAll(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=value&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows){if(x&&x.value)out.push(x.value);}if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
+async function sgetAllKV(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=key,value&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows){if(x&&x.value)out.push({key:x.key,value:x.value});}if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
 
 /* ============================================================================
    HELPERS
@@ -348,6 +350,37 @@ function Styles() {
     .timer{font-family:'Space Mono',monospace;font-size:46px;font-weight:700;text-align:center}
     .link{color:var(--green);font-weight:700;cursor:pointer}
     .scrn{background:var(--navy);color:#fff;min-height:100vh;padding:32px;font-family:'Zen Kaku Gothic New',ui-sans-serif,system-ui,sans-serif}
+    .lt-wrap{min-height:100vh;display:flex;flex-direction:column;color:#fff}
+    .lt-head{padding:24px 36px 12px}
+    .lt-ticker{overflow:hidden;border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);background:#012537;height:54px;display:flex;align-items:center}
+    .lt-track{display:inline-flex;white-space:nowrap;animation:ltscroll linear infinite;will-change:transform}
+    @keyframes ltscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    .lt-item{display:inline-flex;align-items:center;gap:9px;padding:0 22px;font-size:17px;font-weight:500;border-right:1px solid rgba(255,255,255,.08);height:54px}
+    .lt-dot{width:8px;height:8px;border-radius:50%;flex:none}
+    .lt-who{font-weight:700}
+    .lt-mk{color:#9fb4bd;font-size:14px}
+    .lt-pts{font-family:'Space Mono',monospace;font-weight:700;color:var(--green)}
+    .lt-item.gold .lt-pts{color:var(--gold)}
+    .lt-grid{flex:1;display:grid;grid-template-columns:1.1fr 1fr;gap:24px;padding:22px 36px;min-height:0}
+    .lt-card{min-width:0}
+    .lt-h2{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
+    .lt-right{display:flex;flex-direction:column;gap:24px;min-height:0}
+    .lt-lrow{display:flex;align-items:center;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+    .lt-rank{width:34px;font-family:'Space Mono',monospace;font-weight:700;font-size:24px;color:#6f8893}
+    .lt-lrow.top .lt-rank{color:var(--gold)}
+    .lt-name{flex:1;font-size:22px;font-weight:800}
+    .lt-nmk{color:#9fb4bd;font-size:15px;margin-left:10px;font-weight:500}
+    .lt-total{font-family:'Space Mono',monospace;font-weight:900;font-size:24px}
+    .lt-race{display:flex;flex-direction:column;gap:12px}
+    .lt-rrow{display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:12px}
+    .lt-rlabel{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lt-rtrack{height:26px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden}
+    .lt-rfill{height:100%;border-radius:6px;background:linear-gradient(90deg,#0a6b7c,#37c08a);transition:width .8s cubic-bezier(.2,.8,.2,1)}
+    .lt-rrow:nth-child(1) .lt-rfill{background:linear-gradient(90deg,var(--gold),#e3b35e)}
+    .lt-rval{font-family:'Space Mono',monospace;font-weight:700;font-size:15px;width:64px;text-align:right}
+    .lt-act{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:6px}
+    .lt-bar{flex:1;background:linear-gradient(180deg,#4ea3d6,#0a6b7c);border-radius:4px 4px 0 0;min-height:3px;transition:height .8s cubic-bezier(.2,.8,.2,1)}
+    .lt-actx{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#6f8893;font-family:'Space Mono',monospace}
   `}</style>
   );
 }
@@ -424,7 +457,10 @@ function App() {
   const collected = me ? collectedMarkets(me) : [];
 
   if (view === "boot") return <Styles />;
-  if (view === "screen") return (<><Styles /><BigScreen onExit={() => setView("landing")} /></>);
+  if (view === "screen") {
+    const classic = SCREEN_CLASSIC || (typeof window !== "undefined" && /[?&]screen=classic/.test(window.location.search));
+    return (<><Styles />{classic ? <BigScreen onExit={() => setView("landing")} /> : <BigScreenLive onExit={() => setView("landing")} />}</>);
+  }
   if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} /></>);
   if (view === "landing") return (<><Styles /><Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
   if (view === "register") return (<><Styles /><Register onDone={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
@@ -1338,6 +1374,119 @@ function Missions({ me, total, ping, setMe, refresh }) {
 /* ============================================================================
    BIG SCREEN — venue leaderboard. Open with ?screen
 ============================================================================ */
+function BigScreenLive({ onExit }) {
+  const [rows, setRows] = useState([]);
+  const [count, setCount] = useState(0);
+  const [markets, setMarkets] = useState([]);
+  const [feed, setFeed] = useState([]);
+  const [activity, setActivity] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    async function load() {
+      const players = await sgetAll("score:");
+      const sorted = [...players].sort((a, b) => (b.total || 0) - (a.total || 0));
+      const idMap = {};
+      players.forEach((p) => { if (p && p.id) idMap[p.id] = p; });
+      const agg = {};
+      players.forEach((s) => { if (!s || !s.market) return; if (!agg[s.market]) agg[s.market] = { market: s.market, total: 0, count: 0 }; agg[s.market].total += (s.total || 0); agg[s.market].count++; });
+      const ms = Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 8);
+
+      const evRows = await sgetAllKV("inbox:");
+      const events = evRows.map(({ key, value }) => {
+        const recId = (key.split(":")[1]) || "";
+        const rec = idMap[recId] || {};
+        return { ts: value.ts || 0, type: value.type || "event", points: value.points || 0, fromName: value.fromName || "", fromMarket: value.fromMarket || "", toName: rec.name || "", toMarket: rec.market || "" };
+      }).filter((e) => e.fromName || e.toName).sort((a, b) => b.ts - a.ts);
+
+      const now = Date.now(), binMs = 5 * 60000, bins = 12;
+      const buckets = Array.from({ length: bins }, () => 0);
+      events.forEach((e) => { const age = now - e.ts; if (age < 0 || age > bins * binMs) return; const idx = bins - 1 - Math.floor(age / binMs); if (idx >= 0 && idx < bins) buckets[idx]++; });
+
+      if (!alive) return;
+      setRows(sorted.slice(0, 10)); setCount(players.length);
+      setMarkets(ms); setFeed(events.slice(0, 250)); setActivity(buckets);
+    }
+    load(); const t = setInterval(load, 15000); return () => { alive = false; clearInterval(t); };
+  }, []);
+
+  const tickerItems = feed.length ? feed : [
+    { type: "welcome", fromName: "Welcome to the Global Connection Quest", points: 0 },
+    { type: "welcome", fromName: "Meet someone new to score points", points: 0 },
+    { type: "welcome", fromName: "Collect every market stamp", points: 0 },
+  ];
+  const dur = Math.max(24, tickerItems.length * 2.4);
+
+  function lineFor(e, i) {
+    const dotColor = e.type === "connection" ? "var(--green)" : e.type === "trivia" ? "#5fb0d8" : e.type === "boost" ? "var(--gold)" : e.type === "welcome" ? "#9fb4bd" : "#37c08a";
+    let body;
+    if (e.type === "connection") body = (<><span className="lt-who">{e.fromName}</span>{e.fromMarket && <span className="lt-mk">{e.fromMarket}</span>}<span style={{ color: "#9fb4bd" }}>met</span><span className="lt-who">{e.toName || "someone new"}</span>{e.toMarket && <span className="lt-mk">{e.toMarket}</span>}</>);
+    else if (e.type === "trivia") body = (<><span className="lt-who">{e.toName || "Someone"}</span><span style={{ color: "#9fb4bd" }}>scored in {e.fromName}'s quiz</span></>);
+    else if (e.type === "boost") body = (<><span className="lt-who">{e.fromName || "Gamesmaster"}</span><span style={{ color: "#9fb4bd" }}>awarded</span><span className="lt-who">{e.toName || "a player"}</span></>);
+    else if (e.type === "welcome") body = (<span style={{ color: "#cfe0e6" }}>{e.fromName}</span>);
+    else body = (<><span className="lt-who">{e.toName || e.fromName || "Someone"}</span><span style={{ color: "#9fb4bd" }}>earned points</span></>);
+    return (<span className={"lt-item" + (e.type === "boost" ? " gold" : "")} key={i}><span className="lt-dot" style={{ background: dotColor }} />{body}{e.points > 0 && <span className="lt-pts">+{e.points}</span>}</span>);
+  }
+
+  const maxMarket = Math.max(1, ...markets.map((m) => m.total));
+  const maxAct = Math.max(1, ...activity);
+
+  return (
+    <div className="scrn lt-wrap" style={{ padding: 0 }}>
+      {onExit && <span className="link" onClick={onExit} style={{ position: "fixed", top: 14, right: 18, color: "#6f8893", fontSize: 13, zIndex: 5 }}>Exit</span>}
+      <div className="lt-head">
+        <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
+        <h1 style={{ fontSize: 40, fontWeight: 900, margin: "6px 0 2px" }}>Global Connection Quest</h1>
+        <p style={{ color: "#9fb4bd", fontSize: 17 }}>Live leaderboard · {count} explorers in play</p>
+      </div>
+
+      <div className="lt-ticker">
+        <div className="lt-track" style={{ animationDuration: dur + "s" }}>
+          {[...tickerItems, ...tickerItems].map((e, i) => lineFor(e, i))}
+        </div>
+      </div>
+
+      <div className="lt-grid">
+        <div className="lt-card">
+          <div className="lt-h2">Top explorers</div>
+          {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
+          {rows.map((r, i) => (
+            <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")}>
+              <span className="lt-rank">{i + 1}</span>
+              <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
+              <span className="lt-total">{r.total}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="lt-right">
+          <div className="lt-card">
+            <div className="lt-h2">Market race · total points</div>
+            <div className="lt-race">
+              {markets.map((m) => (
+                <div className="lt-rrow" key={m.market}>
+                  <span className="lt-rlabel">{m.market}</span>
+                  <div className="lt-rtrack"><div className="lt-rfill" style={{ width: (m.total / maxMarket * 100).toFixed(1) + "%" }} /></div>
+                  <span className="lt-rval">{(m.total || 0).toLocaleString()}</span>
+                </div>
+              ))}
+              {markets.length === 0 && <p style={{ color: "#9fb4bd" }}>No market data yet.</p>}
+            </div>
+          </div>
+
+          <div className="lt-card">
+            <div className="lt-h2">Activity · last hour</div>
+            <div className="lt-act">
+              {activity.map((v, i) => (<div className="lt-bar" key={i} style={{ height: Math.max(3, v / maxAct * 130) + "px" }} />))}
+            </div>
+            <div className="lt-actx"><span>−60 min</span><span>now</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BigScreen({ onExit }) {
   const [rows, setRows] = useState([]);
   const [count, setCount] = useState(0);
