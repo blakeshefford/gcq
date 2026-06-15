@@ -479,6 +479,12 @@ function Styles() {
       .lt-stat{padding:13px 14px}
       .lt-statn{font-size:26px}
       .lt-statl{font-size:11px;margin-top:6px}
+      .rn-stage{min-height:200px !important}
+      .rn-cap{display:none !important}
+      .rn-stats{right:8px !important;top:8px !important;gap:6px !important}
+      .rn-tile{min-width:0 !important;padding:5px 8px !important;border-radius:9px !important}
+      .rn-v{font-size:15px !important}
+      .rn-l{font-size:8px !important}
     }
   `}</style>
   );
@@ -866,6 +872,7 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
         </div>
         <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 18, justifyContent: "center" }}>
           <span className="link" onClick={onAdmin} style={{ fontSize: 13, color: "#9fb4bd" }}>Gamesmaster access →</span>
+          <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Leaderboard →</span>
         </div>
         <div className="credit">Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
       </div>
@@ -955,30 +962,30 @@ function Register({ onDone, onBack }) {
         </div>
         <div className="card">
           <Field label="Email *"><input className="input" type="email" value={f.email} onChange={set("email")} placeholder="you@fil.com" /></Field>
-          <Field label="Full name *"><input className="input" value={f.name} onChange={set("name")} placeholder="Ashleigh Tan" /></Field>
+          <Field label="Full name *"><input className="input" value={f.name} maxLength={40} onChange={set("name")} placeholder="Ashleigh Tan" /></Field>
           <Field label="Your market *">
             <select className="input" value={f.market} onChange={set("market")}>
               <option value="">Select…</option>
               {MARKETS.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </Field>
-          <Field label="Team / function *"><input className="input" value={f.team} onChange={set("team")} placeholder="e.g. Distribution, Investment Risk" /></Field>
+          <Field label="Team / function *"><input className="input" value={f.team} maxLength={40} onChange={set("team")} placeholder="e.g. Distribution, Investment Risk" /></Field>
           <Field label="Time with FIL *">
             <select className="input" value={f.tenure} onChange={set("tenure")}>
               <option value="">Select…</option>
               {TENURES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </Field>
-          <Field label="Nationality *"><input className="input" value={f.nationality} onChange={set("nationality")} placeholder="British" /></Field>
+          <Field label="Nationality *"><input className="input" value={f.nationality} maxLength={24} onChange={set("nationality")} placeholder="British" /></Field>
           <Field label="Your 3 hobbies and interests *">
             <div style={{ display: "grid", gap: 8 }}>
-              <input className="input" value={f.h1} onChange={set("h1")} placeholder="Skiing" />
-              <input className="input" value={f.h2} onChange={set("h2")} placeholder="Roasting coffee" />
-              <input className="input" value={f.h3} onChange={set("h3")} placeholder="Sci-fi books" />
+              <input className="input" value={f.h1} maxLength={32} onChange={set("h1")} placeholder="Skiing" />
+              <input className="input" value={f.h2} maxLength={32} onChange={set("h2")} placeholder="Roasting coffee" />
+              <input className="input" value={f.h3} maxLength={32} onChange={set("h3")} placeholder="Sci-fi books" />
             </div>
           </Field>
-          <Field label="Most exotic place you've visited *"><input className="input" value={f.exotic} onChange={set("exotic")} placeholder="Madagascar" /></Field>
-          <Field label="Languages you speak *"><input className="input" value={f.languages} onChange={set("languages")} placeholder="English, Japanese" /></Field>
+          <Field label="Most exotic place you've visited *"><input className="input" value={f.exotic} maxLength={40} onChange={set("exotic")} placeholder="Madagascar" /></Field>
+          <Field label="Languages you speak *"><input className="input" value={f.languages} maxLength={50} onChange={set("languages")} placeholder="English, Japanese" /></Field>
           <Field label="Day 1 table number *">
             <select className="input" value={f.table} onChange={set("table")}>
               <option value="">Select…</option>
@@ -1184,7 +1191,7 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
               </select>
             </Field>
             <Field label="Team / function">
-              <input className="input" value={ef.team} onChange={setE("team")} placeholder="e.g. Distribution, Investment Risk" />
+              <input className="input" value={ef.team} maxLength={40} onChange={setE("team")} placeholder="e.g. Distribution, Investment Risk" />
             </Field>
             <Field label="Time with FIL">
               <select className="input" value={ef.tenure} onChange={setE("tenure")}>
@@ -1194,9 +1201,9 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
             </Field>
             <Field label="Your 3 hobbies and interests">
               <div style={{ display: "grid", gap: 8 }}>
-                <input className="input" value={ef.h1} onChange={setE("h1")} placeholder="Skiing" />
-                <input className="input" value={ef.h2} onChange={setE("h2")} placeholder="Roasting coffee" />
-                <input className="input" value={ef.h3} onChange={setE("h3")} placeholder="Sci-fi books" />
+                <input className="input" value={ef.h1} maxLength={32} onChange={setE("h1")} placeholder="Skiing" />
+                <input className="input" value={ef.h2} maxLength={32} onChange={setE("h2")} placeholder="Roasting coffee" />
+                <input className="input" value={ef.h3} maxLength={32} onChange={setE("h3")} placeholder="Sci-fi books" />
               </div>
             </Field>
             <p className="muted" style={{ fontSize: 12, margin: "2px 0 12px" }}>Your hobbies become the questions peers answer about you in the quiz.</p>
@@ -1892,16 +1899,16 @@ function RoomNetwork({ players, pairs }) {
   return (
     <div className="lt-card">
       <div className="lt-h2">The room · live network</div>
-      <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 6", minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
+      <div className="rn-stage" style={{ position: "relative", width: "100%", aspectRatio: "16 / 6", minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
         <canvas ref={cvRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
-        <div style={{ position: "absolute", left: 16, top: 14, pointerEvents: "none" }}>
+        <div className="rn-cap" style={{ position: "absolute", left: 16, top: 14, pointerEvents: "none" }}>
           <div style={{ fontSize: 13, color: "#9fb4bd" }}>Each dot is a guest. Each line is a connection.</div>
         </div>
-        <div style={{ position: "absolute", right: 14, top: 12, display: "flex", gap: 9 }}>
+        <div className="rn-stats" style={{ position: "absolute", right: 14, top: 12, display: "flex", gap: 9 }}>
           {[["Connections", hud.conn], ["Bridges", hud.bridges], ["Markets", hud.markets + "/" + MARKETS.length]].map(([l, v]) => (
-            <div key={l} style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 11, padding: "8px 12px", minWidth: 70, textAlign: "center" }}>
-              <div style={{ fontFamily: "'Space Mono',monospace", fontWeight: 700, fontSize: 20, color: "#fff", lineHeight: 1.05 }}>{v}</div>
-              <div style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: "#9fb4bd" }}>{l}</div>
+            <div key={l} className="rn-tile" style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 11, padding: "8px 12px", minWidth: 70, textAlign: "center" }}>
+              <div className="rn-v" style={{ fontFamily: "'Space Mono',monospace", fontWeight: 700, fontSize: 20, color: "#fff", lineHeight: 1.05 }}>{v}</div>
+              <div className="rn-l" style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: "#9fb4bd" }}>{l}</div>
             </div>
           ))}
         </div>
@@ -2236,6 +2243,7 @@ function AdminPanel({ onExit, onScreen }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <h2 className="h1" style={{ color: "#fff", fontSize: 22 }}>Gamesmaster</h2>
         <div style={{ display: "flex", gap: 16 }}>
+          <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>← Home</span>
           {onScreen && <span className="link" style={{ color: "var(--gold)", fontSize: 13 }} onClick={onScreen}>Leaderboard →</span>}
           <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>Exit</span>
         </div>
