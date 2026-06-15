@@ -21,7 +21,7 @@ const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KE
 // ---- CONFIG: replace with your real attending markets ----------------------
 const MARKETS = [
   "Australia", "Canada", "Hong Kong",
-  "Japan", "Korea", "Luxembourg", "Mainland China", "Singapore", "Spain",
+  "Japan", "Korea", "Mainland China", "Singapore", "Spain",
   "Taiwan", "United Kingdom", "United States", "Other",
 ];
 
@@ -64,7 +64,7 @@ const PTS = {
   stampMilestone: 200,// at 8 markets, then +200 for every market beyond
 };
 
-const EARLY_BIRD_COUNT = 6;   // how many people get the early-bird bonus
+const EARLY_BIRD_COUNT = 10;  // how many people get the early-bird bonus
 const STAMP_MILESTONE_AT = 8; // markets needed for the first stamp milestone
 
 // ---- Levels ----------------------------------------------------------------
@@ -424,7 +424,9 @@ function Styles() {
     .lt-item{display:inline-flex;align-items:center;gap:9px;padding:0 22px;font-size:17px;font-weight:500;border-right:1px solid rgba(255,255,255,.08);height:54px}
     .lt-dot{width:8px;height:8px;border-radius:50%;flex:none}
     .lt-who{font-weight:700}
-    .lt-mk{color:#9fb4bd;font-size:14px}
+    .lt-person{display:inline-flex;align-items:baseline;gap:7px}
+    .lt-met{color:#6f8893;font-style:italic;font-size:14px}
+    .lt-mk{color:#8fa6b1;font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:600}
     .lt-pts{font-family:'Space Mono',monospace;font-weight:700;color:var(--green)}
     .lt-item.gold .lt-pts{color:var(--gold)}
     .lt-grid{flex:1;display:grid;grid-template-columns:1.1fr 1fr;gap:24px;padding:22px 36px;min-height:0}
@@ -1271,7 +1273,7 @@ function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
         {match && (
           <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
             <p style={{ fontWeight: 800, fontSize: 17 }}>{match.name}</p>
-            <p className="muted" style={{ fontSize: 13 }}>{match.market}{match.team ? ` · ${match.team}` : ""}{match.nationality ? ` · ${match.nationality}` : ""}</p>
+            <p className="muted" style={{ fontSize: 13 }}>{match.market}{match.team ? ` · ${match.team}` : ""}{match.nationality ? ` · ${match.nationality}` : ""}{match.table ? ` · Table ${match.table}` : ""}</p>
             {match.hobbies && <p style={{ fontSize: 13, marginTop: 6 }}>Ask them about: <b>{match.hobbies.filter(Boolean)[0]}</b></p>}
             <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Find them, swap codes, and connect above.</p>
           </div>
@@ -1868,9 +1870,10 @@ function RoomNetwork({ players, pairs }) {
       for (let i = 0; i < ids.length; i++) {
         const n = nodes[ids[i]], P = pos[ids[i]]; if (!P) continue;
         if (!n.lit) { ctx.fillStyle = "rgba(180,200,215,0.22)"; ctx.beginPath(); ctx.arc(P[0], P[1], 2.2, 0, 6.2832); ctx.fill(); continue; }
-        const pop = Math.min(1, (now - n.litAt) / 460), sc = 0.5 + 0.5 * pop, rr = n.r * (1 + (1 - pop) * 1.4);
-        ctx.save(); ctx.shadowColor = n.c; ctx.shadowBlur = 9; ctx.globalAlpha = 0.95; ctx.fillStyle = n.c; ctx.beginPath(); ctx.arc(P[0], P[1], rr, 0, 6.2832); ctx.fill(); ctx.restore();
-        ctx.globalAlpha = 0.35 * sc; ctx.strokeStyle = n.c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(P[0], P[1], rr + 3.5, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+        const pop = Math.min(1, (now - n.litAt) / 460), rr = n.r * (1 + (1 - pop) * 1.4);
+        ctx.globalAlpha = 0.16; ctx.fillStyle = n.c; ctx.beginPath(); ctx.arc(P[0], P[1], rr + 4, 0, 6.2832); ctx.fill();
+        ctx.globalAlpha = 0.95; ctx.beginPath(); ctx.arc(P[0], P[1], rr, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1;
+        if (pop < 1) { ctx.globalAlpha = 0.5 * (1 - pop); ctx.strokeStyle = n.c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(P[0], P[1], rr + 6, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1; }
       }
       ctx.font = "12px 'Space Mono', monospace"; ctx.textAlign = "center";
       for (let e = edges.length - 1; e >= 0; e--) {
@@ -1929,8 +1932,10 @@ function BigScreenLive({ onExit }) {
   const [newConnTotal, setNewConnTotal] = useState(0);
 
   useEffect(() => {
-    let alive = true;
+    let alive = true, busy = false;
     async function load() {
+      if (busy) return; busy = true;
+      try {
       const players = await sgetAll("score:");
       const sorted = [...players].sort((a, b) => (b.total || 0) - (a.total || 0));
       const idMap = {};
@@ -1967,8 +1972,9 @@ function BigScreenLive({ onExit }) {
       setStats({ connections, quizzes, points, active });
       setNewConnTotal(players.reduce((s, p) => s + ((p && p.newConnections) || 0), 0));
       setNetPlayers(players); setNetPairs(pairs);
+      } catch (e) {} finally { busy = false; }
     }
-    load(); const t = setInterval(load, 15000); return () => { alive = false; clearInterval(t); };
+    load(); const t = setInterval(load, 6000); return () => { alive = false; clearInterval(t); };
   }, []);
 
   const PROMPTS = ["Meet someone new to score +20", "A new market stamp is worth +30", "Collect every market for a +300 bonus", "Run a quiz with a new contact", "Three markets unlocks a +150 bonus", "Find someone from a market you haven't met"];
@@ -1986,9 +1992,9 @@ function BigScreenLive({ onExit }) {
   function lineFor(e, i) {
     const dotColor = e.type === "connection" ? "var(--green)" : e.type === "trivia" ? "#5fb0d8" : e.type === "boost" ? "var(--gold)" : e.type === "welcome" ? "#9fb4bd" : "#37c08a";
     let body;
-    if (e.type === "connection") body = (<><span className="lt-who">{e.fromName}</span>{e.fromMarket && <span className="lt-mk">{e.fromMarket}</span>}<span style={{ color: "#9fb4bd" }}>met</span><span className="lt-who">{e.toName || "someone new"}</span>{e.toMarket && <span className="lt-mk">{e.toMarket}</span>}</>);
-    else if (e.type === "trivia") body = (<><span className="lt-who">{e.toName || "Someone"}</span><span style={{ color: "#9fb4bd" }}>scored in {e.fromName}'s quiz</span></>);
-    else if (e.type === "boost") body = (<><span className="lt-who">{e.fromName || "Gamesmaster"}</span><span style={{ color: "#9fb4bd" }}>awarded</span><span className="lt-who">{e.toName || "a player"}</span></>);
+    if (e.type === "connection") body = (<><span className="lt-person"><span className="lt-who">{e.fromName}</span>{e.fromMarket && <span className="lt-mk">{e.fromMarket}</span>}</span><span className="lt-met">met</span><span className="lt-person"><span className="lt-who">{e.toName || "someone new"}</span>{e.toName && e.toMarket && <span className="lt-mk">{e.toMarket}</span>}</span></>);
+    else if (e.type === "trivia") body = (<><span className="lt-who">{e.toName || "Someone"}</span><span className="lt-met">scored in {e.fromName}'s quiz</span></>);
+    else if (e.type === "boost") body = (<><span className="lt-who">{e.fromName || "Gamesmaster"}</span><span className="lt-met">awarded</span><span className="lt-who">{e.toName || "a player"}</span></>);
     else if (e.type === "welcome") body = (<span style={{ color: "#cfe0e6" }}>{e.fromName}</span>);
     else body = (<><span className="lt-who">{e.toName || e.fromName || "Someone"}</span><span style={{ color: "#9fb4bd" }}>earned points</span></>);
     return (<span className={"lt-item" + (e.type === "boost" ? " gold" : "")} key={i}><span className="lt-dot" style={{ background: dotColor }} />{body}{e.points > 0 && <span className="lt-pts">+{e.points}</span>}</span>);
