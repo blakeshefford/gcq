@@ -11,7 +11,7 @@ const SUPABASE_URL = "https://ytfvaoddykoqfhpyqzcj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_k810-xD8BHBDuPOBjx3eoA_9mgymeWR";
 const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KEY);
 /* ============================================================================
-   GLOBAL CONNECTION QUEST — Fidelity International Leadership Conference, Tokyo
+   CONNECTION QUEST — Fidelity International Leadership Conference, Tokyo
    Single-file production React app. Backend = artifact shared storage
    (cross-device, concurrency-safe: every write owns a unique key).
    ----------------------------------------------------------------------------
@@ -299,7 +299,7 @@ function Styles() {
     .codebar{display:flex;align-items:center;justify-content:space-between;gap:10px;
       background:var(--navy2);border:1px solid rgba(255,255,255,.12);border-radius:12px;
       padding:9px 14px;margin-bottom:14px;
-      position:sticky;top:8px;z-index:40;box-shadow:0 6px 16px rgba(0,17,28,.45)}
+      position:sticky;top:0;z-index:40;box-shadow:0 6px 16px rgba(0,17,28,.45)}
     .codebar-lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:#9fb4bd}
     .codebar-val{font-weight:700;font-size:20px;letter-spacing:.22em;color:#fff}
     .ptsbox{display:flex;flex-direction:column;gap:1px}
@@ -536,6 +536,13 @@ function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, [view]);
   const goBack = useCallback(() => { try { window.history.back(); } catch {} }, []);
+
+  // Always land at the top so the points header is pinned at the top of the screen
+  // on sign-in and on every tab change (then it stays put via position:sticky).
+  useEffect(() => {
+    if (view !== "app") return;
+    try { window.scrollTo(0, 0); } catch {}
+  }, [view, tab]);
 
   // ask "did you already know them?" after a new connection (Connect + Quiz)
   const askKnew = useCallback((name) => { setKnewAsk({ name }); }, []);
