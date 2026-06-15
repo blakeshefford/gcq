@@ -666,7 +666,7 @@ function App() {
     const classic = SCREEN_CLASSIC || (typeof window !== "undefined" && /[?&]screen=classic/.test(window.location.search));
     return (<><Styles />{classic ? <BigScreen onExit={() => setView("landing")} /> : <BigScreenLive onExit={() => setView("landing")} />}</>);
   }
-  if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} /></>);
+  if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} onScreen={() => setView("screen")} /></>);
   if (view === "landing") return (<><Styles /><Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
   if (view === "register") return (<><Styles /><Register onDone={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
 
@@ -866,7 +866,6 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
         </div>
         <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 18, justifyContent: "center" }}>
           <span className="link" onClick={onAdmin} style={{ fontSize: 13, color: "#9fb4bd" }}>Gamesmaster access →</span>
-          <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Leaderboard →</span>
         </div>
         <div className="credit">Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
       </div>
@@ -2133,7 +2132,7 @@ function BigScreen({ onExit }) {
 /* ============================================================================
    ADMIN / GAMESMASTER — open with ?admin
 ============================================================================ */
-function Admin({ onExit }) {
+function Admin({ onExit, onScreen }) {
   const [ok, setOk] = useState(false);
   const [pin, setPin] = useState("");
   if (!ok) return (
@@ -2147,10 +2146,10 @@ function Admin({ onExit }) {
       </div>
     </div></div>
   );
-  return <AdminPanel onExit={onExit} />;
+  return <AdminPanel onExit={onExit} onScreen={onScreen} />;
 }
 
-function AdminPanel({ onExit }) {
+function AdminPanel({ onExit, onScreen }) {
   const [users, setUsers] = useState([]);
   const [scores, setScores] = useState([]);
   const [flash, setFlashState] = useState(null);
@@ -2236,7 +2235,10 @@ function AdminPanel({ onExit }) {
     <div className="gcq"><div className="wrap" style={{ paddingTop: 16, paddingBottom: 30 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <h2 className="h1" style={{ color: "#fff", fontSize: 22 }}>Gamesmaster</h2>
-        <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>Exit</span>
+        <div style={{ display: "flex", gap: 16 }}>
+          {onScreen && <span className="link" style={{ color: "var(--gold)", fontSize: 13 }} onClick={onScreen}>Leaderboard →</span>}
+          <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>Exit</span>
+        </div>
       </div>
       {msg && <div className="flash" style={{ marginBottom: 12, background: "var(--green)" }}>{msg}</div>}
 
