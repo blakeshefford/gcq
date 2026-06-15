@@ -2057,7 +2057,7 @@ function BigScreenLive({ onExit }) {
             <div className="lt-race">
               {tables.map((t, i) => (
                 <div className="lt-rrow" key={t.table}>
-                  <span className="lt-rlabel">{i + 1}. Table {t.table}</span>
+                  <span className="lt-rlabel">Table {t.table}</span>
                   <div className="lt-rtrack"><div className="lt-rfill" style={{ width: (t.total / maxTable * 100).toFixed(1) + "%" }} /></div>
                   <span className="lt-rval">{(t.total || 0).toLocaleString()}</span>
                 </div>
