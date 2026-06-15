@@ -45,18 +45,27 @@ const CODES = {
 };
 const codeFor = (m) => CODES[m] || m.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
 const INK = ["#c8102e", "#00314a", "#0a6b7c", "#a9791f", "#7a2e57", "#1f7a44"];
+
+// Brand-aligned palette for the live room network (bright enough to read on navy)
+const ROOM_COLORS = ["#4ea3d6", "#37c08a", "#d4a843", "#e0607a", "#5fb0d8", "#7bd1b0", "#b56a92", "#2bb3c0", "#e8a04a", "#6fcae8", "#9cc66a", "#ff8fa3", "#9fb4bd"];
+const roomColor = (market) => { const i = MARKETS.indexOf(market); return i >= 0 ? ROOM_COLORS[i % ROOM_COLORS.length] : "#9fb4bd"; };
 const GLYPHS = ["\u2736", "\u2756", "\u2737", "\u25C6", "\u2742", "\u273F"];
 
 // ---- Scoring (tune as you like) --------------------------------------------
 const PTS = {
   connect: 20,        // each new person you meet (both sides earn)
   newMarket: 30,      // bonus when that person unlocks a new market stamp
-  triviaCorrect: 50,  // per correct answer, to the quizzer (you)
-  triviaSubject: 10,  // to the person you got quizzed on, for the connection
+  triviaCorrect: 150, // per correct answer, to the quizzer (you)
+  triviaSubject: 50,  // to the person you got quizzed on, for the connection
   trioBonus: 150,     // meet 3 different markets
   fullPassport: 300,  // collect every market
   table: 75,          // table challenge complete
+  earlyBird: 100,     // first few people globally to make a connection
+  stampMilestone: 200,// at 8 markets, then +200 for every market beyond
 };
+
+const EARLY_BIRD_COUNT = 6;   // how many people get the early-bird bonus
+const STAMP_MILESTONE_AT = 8; // markets needed for the first stamp milestone
 
 // ---- Levels ----------------------------------------------------------------
 const RANKS = [
@@ -292,14 +301,14 @@ function Styles() {
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     .gcq{font-family:'Zen Kaku Gothic New',ui-sans-serif,system-ui,sans-serif;color:var(--ink);
-      background:var(--navy);min-height:100vh;line-height:1.45;overflow-x:clip}
+      background:var(--navy);min-height:100vh;line-height:1.45}
     .mono{font-family:'Space Mono',ui-monospace,monospace}
     .credit{text-align:center;font-size:12px;color:#7d97a3;padding:22px 0 12px;margin-top:6px}
     .credit a{color:#9fb4bd;text-decoration:underline;font-weight:700}
     .codebar{display:flex;align-items:center;justify-content:space-between;gap:10px;
       background:var(--navy2);border:1px solid rgba(255,255,255,.12);border-radius:12px;
       padding:9px 14px;margin-bottom:14px;
-      position:sticky;top:0;z-index:40;box-shadow:0 6px 16px rgba(0,17,28,.45)}
+      position:sticky;top:0;z-index:50;box-shadow:0 6px 16px rgba(0,17,28,.45)}
     .codebar-lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:#9fb4bd}
     .codebar-val{font-weight:700;font-size:20px;letter-spacing:.22em;color:#fff}
     .ptsbox{display:flex;flex-direction:column;gap:1px}
@@ -419,6 +428,7 @@ function Styles() {
     .lt-pts{font-family:'Space Mono',monospace;font-weight:700;color:var(--green)}
     .lt-item.gold .lt-pts{color:var(--gold)}
     .lt-grid{flex:1;display:grid;grid-template-columns:1.1fr 1fr;gap:24px;padding:22px 36px;min-height:0}
+    .lt-room{padding:0 36px 6px}
     .lt-card{min-width:0}
     .lt-h2{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
     .lt-right{display:flex;flex-direction:column;gap:24px;min-height:0}
@@ -451,6 +461,7 @@ function Styles() {
       .lt-item{font-size:14px;padding:0 15px;height:46px;gap:7px}
       .lt-mk{font-size:12px}
       .lt-grid{grid-template-columns:1fr;gap:16px;padding:16px}
+      .lt-room{padding:0 16px 10px}
       .lt-right{gap:16px}
       .lt-h2{font-size:12px;margin-bottom:12px}
       .lt-lrow{gap:12px;padding:9px 0}
@@ -541,7 +552,12 @@ function App() {
   // on sign-in and on every tab change (then it stays put via position:sticky).
   useEffect(() => {
     if (view !== "app") return;
-    try { window.scrollTo(0, 0); } catch {}
+    try { if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual"; } catch {}
+    const jump = () => { try { window.scrollTo(0, 0); } catch {} };
+    jump();
+    const r = requestAnimationFrame(jump);
+    const t = setTimeout(jump, 60);
+    return () => { cancelAnimationFrame(r); clearTimeout(t); };
   }, [view, tab]);
 
   // ask "did you already know them?" after a new connection (Connect + Quiz)
@@ -677,11 +693,13 @@ function App() {
             </button>
           )}
           {flash && <div className="flash" style={{ marginBottom: 14 }}>⚡ {flash.title} — {flash.desc}{flash.mult > 1 ? `  (×${flash.mult} points!)` : ""}</div>}
-          {tab === "passport" && <Passport me={me} total={total} inbox={inbox} collected={collected} ping={ping} setMe={setMe} refresh={refresh} />}
-          {tab === "connect" && <Connect me={me} flash={flash} ping={ping} setMe={setMe} refresh={refresh} collected={collected} askKnew={askKnew} />}
-          {tab === "quiz" && <QuizHub me={me} ping={ping} setMe={setMe} refresh={refresh} askKnew={askKnew} />}
-          {tab === "learn" && <Learn me={me} ping={ping} setMe={setMe} refresh={refresh} />}
-          {tab === "missions" && <Missions me={me} total={total} ping={ping} setMe={setMe} refresh={refresh} />}
+          <div style={{ overflowX: "clip" }}>
+            {tab === "passport" && <Passport me={me} total={total} inbox={inbox} collected={collected} ping={ping} setMe={setMe} refresh={refresh} />}
+            {tab === "connect" && <Connect me={me} flash={flash} ping={ping} setMe={setMe} refresh={refresh} collected={collected} askKnew={askKnew} />}
+            {tab === "quiz" && <QuizHub me={me} ping={ping} setMe={setMe} refresh={refresh} askKnew={askKnew} />}
+            {tab === "learn" && <Learn me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+            {tab === "missions" && <Missions me={me} total={total} ping={ping} setMe={setMe} refresh={refresh} />}
+          </div>
         </div>
         <div className="nav">
           {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["missions", "Quests"]].map(([k, l]) => (
@@ -739,7 +757,66 @@ async function applyAutoAwards(rec, evs) {
   if (cols.length >= MARKETS.length && !next.fullAwarded) {
     next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
   }
+  // Stamp milestone: +200 at 8 markets, then +200 for each market beyond (runs alongside the above)
+  const units = Math.max(0, cols.length - (STAMP_MILESTONE_AT - 1)); // 8 markets -> 1, 9 -> 2, ...
+  const paid = next.stampBonusUnits || 0;
+  if (units > paid) {
+    next = { ...next, stampBonusUnits: units, selfPoints: (next.selfPoints || 0) + PTS.stampMilestone * (units - paid) };
+  }
   return next;
+}
+
+// Create a connection from `me` to `idx`. Centralises two things:
+//  - Q6: if the peer already connected with me (both entered codes at once), the base
+//    connect points already arrived via their inbox event, so don't double-count and
+//    don't send a duplicate event. Reduces (can't fully eliminate) the exact-simultaneous race.
+//  - Q3: the first EARLY_BIRD_COUNT people globally to make a connection get a one-off bonus.
+// Persists my record (+ the peer's inbox event when needed) and returns { next, earned, earlyBird }.
+async function awardConnection(me, idx, mult) {
+  mult = mult || 1;
+  const collected = collectedMarkets(me);
+  const isNewMarket = !collected.includes(idx.market) && idx.market !== me.market;
+
+  let alreadyInbound = false;
+  try {
+    const myEvs = await sgetAll("inbox:" + me.id + ":");
+    alreadyInbound = myEvs.some((e) => e.type === "connection" && e.fromId === idx.id);
+  } catch (e) {}
+  const base = alreadyInbound ? 0 : PTS.connect;
+  const earned = (base + (isNewMarket ? PTS.newMarket : 0)) * mult;
+
+  let earlyBird = false;
+  if (!me.earlyBird) {
+    try {
+      const claimed = await slist("earlybird:");
+      const mine = "earlybird:" + me.id;
+      if (!claimed.includes(mine) && claimed.length < EARLY_BIRD_COUNT) { await sset(mine, { ts: Date.now() }); earlyBird = true; }
+    } catch (e) {}
+  }
+
+  const next = {
+    ...me,
+    selfPoints: (me.selfPoints || 0) + earned + (earlyBird ? PTS.earlyBird : 0),
+    earlyBird: me.earlyBird || earlyBird,
+    connections: [...(me.connections || []), { id: idx.id, name: idx.name, market: idx.market, team: idx.team || "" }],
+    missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
+  };
+  await sset("users:" + me.id, next);
+  if (!alreadyInbound) {
+    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", ts: Date.now() };
+    await sset("inbox:" + idx.id + ":" + ev.id, ev);
+  }
+  return { next, earned, earlyBird };
+}
+
+// Honour-system points for engaging with the Learn sections (capped, one tap each).
+async function logHonour(me, key, cap, pts, setMe, refresh, ping, label) {
+  const used = me[key] || 0;
+  if (used >= cap) { ping("You've already banked the max for " + label); return; }
+  const next = { ...me, [key]: used + 1, selfPoints: (me.selfPoints || 0) + pts };
+  setMe(next); await sset("users:" + me.id, next); refresh(next);
+  const left = cap - used - 1;
+  ping(`+${pts}${left > 0 ? ` — ${left} more to bank` : " — that's the lot!"}`);
 }
 
 /* ============================================================================
@@ -1151,25 +1228,14 @@ function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
     if ((me.connections || []).some((x) => x.id === idx.id)) { setBusy(false); ping("Already connected with " + idx.name); setCode(""); return; }
 
     const mult = flash && flash.mult > 1 ? flash.mult : 1;
-    const isNewMarket = !collected.includes(idx.market) && idx.market !== me.market;
-    let earned = PTS.connect + (isNewMarket ? PTS.newMarket : 0);
-    earned = earned * mult;
-
-    // credit me (initiator)
-    const next = {
-      ...me,
-      selfPoints: (me.selfPoints || 0) + earned,
-      connections: [...(me.connections || []), { id: idx.id, name: idx.name, market: idx.market, team: idx.team || "" }],
-      missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
-    };
-    setMe(next); await sset("users:" + me.id, next);
-    // credit peer via their inbox (unique key, concurrency-safe)
-    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", ts: Date.now() };
-    await sset("inbox:" + idx.id + ":" + ev.id, ev);
+    const { next, earned, earlyBird } = await awardConnection(me, idx, mult);
+    setMe(next);
     setBusy(false); setCode("");
-    ping(`+${earned} — connected with ${idx.name}!`);
+    let msg = earned > 0 ? `+${earned} — connected with ${idx.name}!` : `Connected with ${idx.name}!`;
+    if (earlyBird) msg += ` · +${PTS.earlyBird} early bird!`;
+    ping(msg);
     refresh(next);
-    if (askKnew && (ASK_KNEW_EACH_TIME || !me.metBeforeAsked)) askKnew(idx.name);
+    if (askKnew) askKnew(idx.name);
   }
 
   async function findMatch() {
@@ -1289,21 +1355,13 @@ function Trivia({ me, ping, setMe, refresh, askKnew }) {
     const full = (await sget("users:" + idx.id)) || idx;
     // entering a code here also connects you, exactly like Connect & score
     if (!(me.connections || []).some((x) => x.id === idx.id)) {
-      const collected = collectedMarkets(me);
-      const isNewMarket = !collected.includes(idx.market) && idx.market !== me.market;
-      const earned = PTS.connect + (isNewMarket ? PTS.newMarket : 0);
-      const linked = {
-        ...me,
-        selfPoints: (me.selfPoints || 0) + earned,
-        connections: [...(me.connections || []), { id: idx.id, name: idx.name, market: idx.market, team: idx.team || "" }],
-        missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
-      };
-      setMe(linked); await sset("users:" + me.id, linked);
-      const ev = { id: eid(), type: "connection", points: PTS.connect, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", ts: Date.now() };
-      await sset("inbox:" + idx.id + ":" + ev.id, ev);
-      ping(`+${earned} — connected with ${idx.name}!`);
-      refresh(linked);
-      if (askKnew && (ASK_KNEW_EACH_TIME || !me.metBeforeAsked)) askKnew(idx.name);
+      const { next, earned, earlyBird } = await awardConnection(me, idx, 1);
+      setMe(next);
+      let msg = earned > 0 ? `+${earned} — connected with ${idx.name}!` : `Connected with ${idx.name}!`;
+      if (earlyBird) msg += ` · +${PTS.earlyBird} early bird!`;
+      ping(msg);
+      refresh(next);
+      if (askKnew) askKnew(idx.name);
     }
     setBusy(false);
     setPeer(full); setQs(buildQuestions(full)); setStage("run"); setQi(0); setCorrect(0); correctRef.current = 0; setTime(60);
@@ -1423,14 +1481,14 @@ function Learn({ me, ping, setMe, refresh }) {
           <button key={k} className={"seg" + (sub === k ? " on" : "")} onClick={() => setSub(k)}>{l}</button>
         ))}
       </div>
-      {sub === "ice" && <Icebreakers />}
-      {sub === "hands" && <ShowOfHands />}
+      {sub === "ice" && <Icebreakers me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+      {sub === "hands" && <ShowOfHands me={me} ping={ping} setMe={setMe} refresh={refresh} />}
       {sub === "japan" && <JapanFacts />}
       {sub === "phrases" && <JapanesePhrases />}
     </div>
   );
 }
-function Icebreakers() {
+function Icebreakers({ me, ping, setMe, refresh }) {
   const fresh = () => shuffle(ICEBREAKERS.map((_, i) => i));
   const [order, setOrder] = useState(fresh);
   const [start, setStart] = useState(0);
@@ -1440,6 +1498,7 @@ function Icebreakers() {
     if (ns >= ICEBREAKERS.length) { setOrder(fresh()); setStart(0); }
     else setStart(ns);
   }
+  const used = me.iceLogs || 0, cap = 3;
   return (
     <div className="card">
       <div className="eyebrow" style={{ color: "var(--navy)" }}>Conversation starters</div>
@@ -1452,11 +1511,16 @@ function Icebreakers() {
         ))}
       </div>
       <button className="btn btn-navy" style={{ marginTop: 10 }} onClick={surprise}>Surprise me — three more</button>
+      <button className="btn btn-ghost" style={{ marginTop: 8 }} disabled={used >= cap}
+        onClick={() => logHonour(me, "iceLogs", cap, 10, setMe, refresh, ping, "icebreakers")}>
+        {used >= cap ? "Icebreakers maxed — +30 banked" : `Used one with someone? Tap for +10 (${cap - used} left)`}
+      </button>
     </div>
   );
 }
-function ShowOfHands() {
+function ShowOfHands({ me, ping, setMe, refresh }) {
   const [i, setI] = useState(0);
+  const used = me.handsLogs || 0, cap = 3;
   return (
     <div>
       <div className="card" style={{ marginBottom: 10 }}>
@@ -1472,6 +1536,10 @@ function ShowOfHands() {
           <button className="btn btn-navy" onClick={() => setI((i + 1) % HANDS.length)}>Next</button>
         </div>
         <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => setI(Math.floor(Math.random() * HANDS.length))}>Shuffle</button>
+        <button className="btn btn-ghost" style={{ marginTop: 8 }} disabled={used >= cap}
+          onClick={() => logHonour(me, "handsLogs", cap, 10, setMe, refresh, ping, "show of hands")}>
+          {used >= cap ? "Show of hands maxed — +30 banked" : `Ran one at your table? Tap for +10 (${cap - used} left)`}
+        </button>
       </div>
     </div>
   );
@@ -1725,9 +1793,135 @@ function Missions({ me, total, ping, setMe, refresh }) {
 /* ============================================================================
    BIG SCREEN — venue leaderboard. Open with ?screen
 ============================================================================ */
+function RoomNetwork({ players, pairs }) {
+  const cvRef = useRef(null);
+  const nodesRef = useRef({});       // id -> node layout/state
+  const orderRef = useRef([]);       // stable id order
+  const edgesRef = useRef([]);       // { a, b, born }
+  const seenRef = useRef(new Set());  // pair keys already drawn
+  const primedRef = useRef(false);   // first ingest: don't animate the whole backlog
+  const [hud, setHud] = useState({ conn: 0, bridges: 0, markets: 0, lit: 0, total: 0, full: false });
+
+  useEffect(() => {
+    const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+    const nodes = nodesRef.current;
+    const primed = primedRef.current;
+    const litStamp = primed ? now : now - 2000;   // skip the mass pop on first load
+    const edgeBorn = primed ? now : now - 4000;     // backlog edges render as settled lines
+    (players || []).forEach((p) => {
+      if (!p || !p.id) return;
+      if (!nodes[p.id]) {
+        const mi = Math.max(0, MARKETS.indexOf(p.market));
+        const col = mi % 4, row = Math.floor(mi / 4);
+        const cx = 0.12 + col * 0.252, cy = 0.26 + row * 0.18;
+        const nx = Math.min(0.95, Math.max(0.05, cx + (Math.random() + Math.random() - 1) * 0.07));
+        const ny = Math.min(0.84, Math.max(0.22, cy + (Math.random() + Math.random() - 1) * 0.06));
+        nodes[p.id] = { nx, ny, c: roomColor(p.market), mi, name: ((p.name || "").split(" ")[0]) || "Guest", lit: false, litAt: 0, ph: Math.random() * 6.28, r: 2.8 + Math.random() * 1.4 };
+        orderRef.current.push(p.id);
+      }
+      if ((p.total || 0) > 0 && !nodes[p.id].lit) { nodes[p.id].lit = true; nodes[p.id].litAt = litStamp; }
+    });
+    (pairs || []).forEach(([a, b]) => {
+      if (!a || !b || a === b) return;
+      if (nodes[a] && !nodes[a].lit) { nodes[a].lit = true; nodes[a].litAt = litStamp; }
+      if (nodes[b] && !nodes[b].lit) { nodes[b].lit = true; nodes[b].litAt = litStamp; }
+      const key = a < b ? a + "|" + b : b + "|" + a;
+      if (!seenRef.current.has(key)) {
+        seenRef.current.add(key);
+        edgesRef.current.push({ a, b, born: edgeBorn });
+        if (edgesRef.current.length > 160) edgesRef.current.shift();
+      }
+    });
+    primedRef.current = true;
+    const litIds = orderRef.current.filter((id) => nodes[id] && nodes[id].lit);
+    const mkts = new Set(litIds.map((id) => nodes[id].mi));
+    const bridges = new Set();
+    seenRef.current.forEach((k) => { const [x, y] = k.split("|"); if (nodes[x] && nodes[y] && nodes[x].mi !== nodes[y].mi) bridges.add(Math.min(nodes[x].mi, nodes[y].mi) + "-" + Math.max(nodes[x].mi, nodes[y].mi)); });
+    const total = orderRef.current.length;
+    setHud({ conn: seenRef.current.size, bridges: bridges.size, markets: mkts.size, lit: litIds.length, total, full: total > 0 && litIds.length >= total });
+  }, [players, pairs]);
+
+  useEffect(() => {
+    const cv = cvRef.current; if (!cv) return;
+    const ctx = cv.getContext("2d");
+    let W = 0, Hh = 0, DPR = 1, raf, started = 0;
+    const resize = () => { const r = cv.getBoundingClientRect(); DPR = Math.min(2, window.devicePixelRatio || 1); W = r.width; Hh = r.height; cv.width = Math.max(1, W * DPR); cv.height = Math.max(1, Hh * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); };
+    resize();
+    let ro; if (window.ResizeObserver) { ro = new ResizeObserver(resize); ro.observe(cv); } else window.addEventListener("resize", resize);
+    const mx = 0.045;
+    const px = (n, t) => (mx + n.nx * (1 - 2 * mx)) * W + Math.sin(t / 2600 + n.ph) * W * 0.006;
+    const py = (n, t) => (n.ny) * Hh + Math.cos(t / 2400 + n.ph) * Hh * 0.006;
+    const frame = (now) => {
+      if (!started) started = now; const t = now - started;
+      ctx.clearRect(0, 0, W, Hh);
+      const nodes = nodesRef.current, ids = orderRef.current, pos = {};
+      ids.forEach((id) => { const n = nodes[id]; pos[id] = [px(n, t), py(n, t)]; });
+      ctx.lineCap = "round";
+      const edges = edgesRef.current;
+      for (let e = 0; e < edges.length; e++) {
+        const ed = edges[e], A = pos[ed.a], B = pos[ed.b]; if (!A || !B) continue;
+        const age = now - ed.born, baseA = Math.max(0.06, 0.27 - age / 9000);
+        ctx.strokeStyle = "rgba(150,205,255," + (age < 900 ? Math.min(0.55, baseA + 0.4) : baseA) + ")";
+        ctx.lineWidth = age < 900 ? 1.6 : 1; ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+        if (age < 1100) { const tt = Math.min(1, age / 1100), dx = A[0] + (B[0] - A[0]) * tt, dy = A[1] + (B[1] - A[1]) * tt; const c = nodes[ed.a] ? nodes[ed.a].c : "#5fb0d8"; ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 14; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(dx, dy, 3.1, 0, 6.2832); ctx.fill(); ctx.restore(); }
+      }
+      for (let i = 0; i < ids.length; i++) {
+        const n = nodes[ids[i]], P = pos[ids[i]]; if (!P) continue;
+        if (!n.lit) { ctx.fillStyle = "rgba(180,200,215,0.22)"; ctx.beginPath(); ctx.arc(P[0], P[1], 2.2, 0, 6.2832); ctx.fill(); continue; }
+        const pop = Math.min(1, (now - n.litAt) / 460), sc = 0.5 + 0.5 * pop, rr = n.r * (1 + (1 - pop) * 1.4);
+        ctx.save(); ctx.shadowColor = n.c; ctx.shadowBlur = 9; ctx.globalAlpha = 0.95; ctx.fillStyle = n.c; ctx.beginPath(); ctx.arc(P[0], P[1], rr, 0, 6.2832); ctx.fill(); ctx.restore();
+        ctx.globalAlpha = 0.35 * sc; ctx.strokeStyle = n.c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(P[0], P[1], rr + 3.5, 0, 6.2832); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      ctx.font = "12px 'Space Mono', monospace"; ctx.textAlign = "center";
+      for (let e = edges.length - 1; e >= 0; e--) {
+        const ed = edges[e], life = now - ed.born; if (life > 1800) continue;
+        const A = pos[ed.a], B = pos[ed.b]; if (!A || !B) continue;
+        const a = 1 - life / 1800, my = (A[1] + B[1]) / 2 - 12 - life / 1800 * 14, mxp = (A[0] + B[0]) / 2;
+        ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.65)"; ctx.shadowBlur = 5; ctx.fillStyle = "rgba(255,255,255," + (a * 0.95).toFixed(2) + ")";
+        ctx.fillText((nodes[ed.a] ? nodes[ed.a].name : "") + "  \u00d7  " + (nodes[ed.b] ? nodes[ed.b].name : ""), mxp, my); ctx.restore();
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => { cancelAnimationFrame(raf); if (ro) ro.disconnect(); else window.removeEventListener("resize", resize); };
+  }, []);
+
+  const pct = hud.total ? Math.round(hud.lit / hud.total * 100) : 0;
+  return (
+    <div className="lt-card">
+      <div className="lt-h2">The room · live network</div>
+      <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 6", minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
+        <canvas ref={cvRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+        <div style={{ position: "absolute", left: 16, top: 14, pointerEvents: "none" }}>
+          <div style={{ fontSize: 13, color: "#9fb4bd" }}>Each dot is a guest. Each line is a connection.</div>
+        </div>
+        <div style={{ position: "absolute", right: 14, top: 12, display: "flex", gap: 9 }}>
+          {[["Connections", hud.conn], ["Bridges", hud.bridges], ["Markets", hud.markets + "/" + MARKETS.length]].map(([l, v]) => (
+            <div key={l} style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 11, padding: "8px 12px", minWidth: 70, textAlign: "center" }}>
+              <div style={{ fontFamily: "'Space Mono',monospace", fontWeight: 700, fontSize: 20, color: "#fff", lineHeight: 1.05 }}>{v}</div>
+              <div style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: "#9fb4bd" }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ position: "absolute", left: 16, right: 16, bottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: "#cfe0e6", marginBottom: 7 }}>
+            <span>Light up the room</span>
+            <span style={{ color: hud.full ? "#ffd98a" : "#9fb4bd", fontWeight: hud.full ? 700 : 400 }}>{hud.full ? "Room lit ✨" : `${hud.lit} of ${hud.total} guests in play`}</span>
+          </div>
+          <div style={{ height: 10, background: "rgba(255,255,255,.09)", borderRadius: 6, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg,#2f8fd0,#37c08a)", borderRadius: 6, transition: "width .6s ease" }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BigScreenLive({ onExit }) {
   const [rows, setRows] = useState([]);
   const [count, setCount] = useState(0);
+  const [netPlayers, setNetPlayers] = useState([]);
+  const [netPairs, setNetPairs] = useState([]);
   const [markets, setMarkets] = useState([]);
   const [tables, setTables] = useState([]);
   const [feed, setFeed] = useState([]);
@@ -1743,13 +1937,17 @@ function BigScreenLive({ onExit }) {
       players.forEach((p) => { if (p && p.id) idMap[p.id] = p; });
       const agg = {};
       players.forEach((s) => { if (!s || !s.market) return; if (!agg[s.market]) agg[s.market] = { market: s.market, total: 0, count: 0 }; agg[s.market].total += (s.total || 0); agg[s.market].count++; });
-      const ms = Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 8);
+      const ms = Object.values(agg).map((v) => ({ ...v, avg: Math.round(v.total / v.count) })).sort((a, b) => b.avg - a.avg).slice(0, 8);
 
       const tagg = {};
       players.forEach((s) => { if (!s || !s.table) return; if (!tagg[s.table]) tagg[s.table] = { table: s.table, total: 0, count: 0 }; tagg[s.table].total += (s.total || 0); tagg[s.table].count++; });
       const ts8 = Object.values(tagg).sort((a, b) => b.total - a.total).slice(0, 8);
 
       const evRows = await sgetAllKV("inbox:");
+      const pairs = [];
+      evRows.forEach(({ key, value }) => {
+        if (value && value.type === "connection") { const rid = (key.split(":")[1]) || ""; if (rid && value.fromId) pairs.push([value.fromId, rid]); }
+      });
       const events = evRows.map(({ key, value }) => {
         const recId = (key.split(":")[1]) || "";
         const rec = idMap[recId] || {};
@@ -1768,6 +1966,7 @@ function BigScreenLive({ onExit }) {
       setMarkets(ms); setTables(ts8); setFeed(events.slice(0, 250));
       setStats({ connections, quizzes, points, active });
       setNewConnTotal(players.reduce((s, p) => s + ((p && p.newConnections) || 0), 0));
+      setNetPlayers(players); setNetPairs(pairs);
     }
     load(); const t = setInterval(load, 15000); return () => { alive = false; clearInterval(t); };
   }, []);
@@ -1795,7 +1994,7 @@ function BigScreenLive({ onExit }) {
     return (<span className={"lt-item" + (e.type === "boost" ? " gold" : "")} key={i}><span className="lt-dot" style={{ background: dotColor }} />{body}{e.points > 0 && <span className="lt-pts">+{e.points}</span>}</span>);
   }
 
-  const maxMarket = Math.max(1, ...markets.map((m) => m.total));
+  const maxMarket = Math.max(1, ...markets.map((m) => m.avg));
   const maxTable = Math.max(1, ...tables.map((t) => t.total));
 
   return (
@@ -1828,13 +2027,13 @@ function BigScreenLive({ onExit }) {
 
         <div className="lt-right">
           <div className="lt-card">
-            <div className="lt-h2">Market race · total points</div>
+            <div className="lt-h2">Market race · avg points per person</div>
             <div className="lt-race">
               {markets.map((m) => (
                 <div className="lt-rrow" key={m.market}>
                   <span className="lt-rlabel">{m.market}</span>
-                  <div className="lt-rtrack"><div className="lt-rfill" style={{ width: (m.total / maxMarket * 100).toFixed(1) + "%" }} /></div>
-                  <span className="lt-rval">{(m.total || 0).toLocaleString()}</span>
+                  <div className="lt-rtrack"><div className="lt-rfill" style={{ width: (m.avg / maxMarket * 100).toFixed(1) + "%" }} /></div>
+                  <span className="lt-rval">{(m.avg || 0).toLocaleString()}</span>
                 </div>
               ))}
               {markets.length === 0 && <p style={{ color: "#9fb4bd" }}>No market data yet.</p>}
@@ -1865,6 +2064,9 @@ function BigScreenLive({ onExit }) {
             </div>
           </div>
         </div>
+      </div>
+      <div className="lt-room">
+        <RoomNetwork players={netPlayers} pairs={netPairs} />
       </div>
       <div className="credit" style={{ padding: "10px 0 16px" }}>Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
     </div>
@@ -1984,7 +2186,7 @@ function AdminPanel({ onExit }) {
 
   async function giveBoost() {
     const c = boost.code.trim(); const p = parseInt(boost.pts, 10);
-    if (!/^\d{4}$/.test(c) || !p) { flashMsg("Enter a valid code and points"); return; }
+    if (!/^\d{3}$/.test(c) || !p) { flashMsg("Enter a valid code and points"); return; }
     const idx = await sget("code:" + c);
     if (!idx) { flashMsg("Code not found"); return; }
     const ev = { id: eid(), type: "boost", points: p, fromId: "gamesmaster", fromName: "Gamesmaster", fromMarket: "", reason: boost.reason, ts: Date.now() };
@@ -1997,7 +2199,19 @@ function AdminPanel({ onExit }) {
     if (!c || !p) { flashMsg("Enter a code and points"); return; }
     const mu = parseInt(bonus.uses, 10) || 0;
     await sset("bonus:" + c, { code: c, points: p, label: bonus.label.trim(), maxUses: mu, ts: Date.now() });
-    flashMsg(`Code ${c} created (+${p}${mu ? `, ${mu} uses` : ""})`); setBonus({ code: "", pts: "50", label: "", uses: "" }); load();
+    flashMsg(`Code ${c} saved (+${p}${mu ? `, ${mu} uses` : ""})`); setBonus({ code: "", pts: "50", label: "", uses: "" }); load();
+  }
+
+  function editBonus(b) {
+    setBonus({ code: b.code, pts: String(b.points || ""), label: b.label || "", uses: b.maxUses ? String(b.maxUses) : "" });
+    flashMsg(`Editing ${b.code} — change the fields and Save`);
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+
+  async function deleteBonus(b) {
+    if (!window.confirm(`Delete bonus code ${b.code}? It will stop working immediately.`)) return;
+    await sset("bonus:" + b.code, null); // soft-delete: redemptions read null and the list filters it out
+    flashMsg(`Deleted ${b.code}`); load();
   }
 
   async function adjust(u, delta) {
@@ -2006,7 +2220,7 @@ function AdminPanel({ onExit }) {
     // recompute that user's leaderboard cache from their inbox too
     const ik = await slist("inbox:" + u.id + ":"); let inb = 0;
     for (const k of ik) { const e = await sget(k); if (e) inb += e.points; }
-    await sset("score:" + u.id, { id: u.id, name: u.name, market: u.market, total: (next.selfPoints || 0) + inb, table: u.table || "", charity: u.charity || "" });
+    await sset("score:" + u.id, { id: u.id, name: u.name, market: u.market, total: (next.selfPoints || 0) + inb, table: u.table || "", charity: u.charity || "", newConnections: u.newConnections || 0 });
     flashMsg(`Adjusted ${u.name} by ${delta > 0 ? "+" : ""}${delta}`); load();
   }
 
@@ -2070,7 +2284,7 @@ function AdminPanel({ onExit }) {
 
       <div className="card" style={{ marginBottom: 12 }}>
         <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Award points in person (Etiquette boost)</div>
-        <input className="input" style={{ marginBottom: 8 }} placeholder="Attendee's 4-digit code" value={boost.code} inputMode="numeric"
+        <input className="input" style={{ marginBottom: 8 }} placeholder="Attendee's 3-digit code" value={boost.code} inputMode="numeric"
           onChange={(e) => setBoost({ ...boost, code: e.target.value.replace(/\D/g, "").slice(0, 3) })} />
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <input className="input" style={{ width: 90 }} placeholder="Pts" value={boost.pts} inputMode="numeric" onChange={(e) => setBoost({ ...boost, pts: e.target.value.replace(/\D/g, "") })} />
@@ -2089,7 +2303,7 @@ function AdminPanel({ onExit }) {
           <input className="input" style={{ width: 110 }} placeholder="Max uses" value={bonus.uses} inputMode="numeric" onChange={(e) => setBonus({ ...bonus, uses: e.target.value.replace(/\D/g, "") })} />
           <input className="input" placeholder="Label" value={bonus.label} onChange={(e) => setBonus({ ...bonus, label: e.target.value })} />
         </div>
-        <button className="btn btn-navy" onClick={createBonus}>Create code</button>
+        <button className="btn btn-navy" onClick={createBonus}>{bonus.code && bonusList.some((b) => b.code === bonus.code.trim().toUpperCase().replace(/\s+/g, "")) ? "Save changes" : "Create code"}</button>
         {bonusList.length > 0 && (
           <div style={{ marginTop: 12 }}>
             {bonusList.map((b) => {
@@ -2098,9 +2312,11 @@ function AdminPanel({ onExit }) {
               return (
                 <div key={b.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderTop: "1px solid var(--line)", fontSize: 13 }}>
                   <span className="mono" style={{ fontWeight: 700, letterSpacing: ".08em" }}>{b.code}</span>
-                  <span style={{ flex: 1, margin: "0 10px" }} className="muted">{b.label || "—"}</span>
+                  <span style={{ flex: 1, margin: "0 10px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="muted">{b.label || "—"}</span>
                   <span className="muted" style={{ fontSize: 12, marginRight: 8, color: full ? "var(--seal)" : "var(--muted)" }}>{used}{b.maxUses > 0 ? `/${b.maxUses}` : ""} used</span>
-                  <span className="pill">+{b.points}</span>
+                  <span className="pill" style={{ marginRight: 8 }}>+{b.points}</span>
+                  <span className="link" style={{ fontSize: 12, marginRight: 8 }} onClick={() => editBonus(b)}>Edit</span>
+                  <span className="link" style={{ fontSize: 12, color: "var(--seal)" }} onClick={() => deleteBonus(b)}>Delete</span>
                 </div>
               );
             })}
