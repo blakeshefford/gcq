@@ -508,20 +508,20 @@ function Explore() {
   return (
     <div>
       <div className="eyebrow">Explore</div>
-      <h2 style={{ margin: "6px 0 4px", fontSize: 22, color: "var(--navy)", fontWeight: 800 }}>Neighbourhood guide</h2>
-      <p style={{ color: "#5a6b73", fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
+      <h2 style={{ margin: "6px 0 4px", fontSize: 22, color: "#fff", fontWeight: 800 }}>Neighbourhood guide</h2>
+      <p style={{ color: "#c7d4dd", fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
         Hand-picked spots a short walk from the venue. Tap a pin for the tip, then open it in Google Maps for directions.
       </p>
-      <div style={{ position: "relative", height: "min(72vh, 640px)", minHeight: 440, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "#e9eef0", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+      <div style={{ position: "relative", height: "min(70vh, 560px)", minHeight: 420, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "var(--navy2)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
         <iframe
           title="FIL neighbourhood map"
           src={`https://www.google.com/maps/d/embed?mid=${MID}`}
-          style={{ position: "absolute", top: -64, left: 0, width: "100%", height: "calc(100% + 64px)", border: 0, display: "block" }}
+          style={{ position: "absolute", top: -78, left: 0, width: "100%", height: "calc(100% + 78px)", border: 0, display: "block" }}
           loading="lazy"
         />
       </div>
       <a href={`https://www.google.com/maps/d/viewer?mid=${MID}`} target="_blank" rel="noopener noreferrer"
-        style={{ display: "inline-block", marginTop: 12, color: "var(--green)", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
+        style={{ display: "inline-block", marginTop: 12, color: "var(--gold)", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
         Open the full map in Google Maps →
       </a>
     </div>
