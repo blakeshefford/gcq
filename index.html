@@ -757,7 +757,7 @@ function App() {
   if (view === "boot") return <Styles />;
   if (view === "screen") {
     const classic = SCREEN_CLASSIC || (typeof window !== "undefined" && /[?&]screen=classic/.test(window.location.search));
-    return (<><Styles /><AnnounceBar />{classic ? <BigScreen onExit={() => setView("landing")} /> : <BigScreenLive onExit={() => setView("landing")} />}</>);
+    return (<><Styles /><AnnounceBar />{classic ? <BigScreen onExit={() => setView("landing")} onAdmin={() => setView("admin")} /> : <BigScreenLive onExit={() => setView("landing")} onAdmin={() => setView("admin")} />}</>);
   }
   if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} onScreen={() => setView("screen")} /></>);
   if (view === "landing") return (<><Styles /><AnnounceBar /><Landing onAuthed={(rec) => { setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
@@ -2015,7 +2015,7 @@ function RoomNetwork({ players, pairs }) {
   );
 }
 
-function BigScreenLive({ onExit }) {
+function BigScreenLive({ onExit, onAdmin }) {
   const [rows, setRows] = useState([]);
   const [count, setCount] = useState(0);
   const [netPlayers, setNetPlayers] = useState([]);
@@ -2100,7 +2100,12 @@ function BigScreenLive({ onExit }) {
 
   return (
     <div className="scrn lt-wrap" style={{ padding: 0 }}>
-      {onExit && <span className="link" onClick={onExit} style={{ position: "fixed", top: 14, right: 18, color: "#6f8893", fontSize: 13, zIndex: 5 }}>Exit</span>}
+      {(onExit || onAdmin) && (
+        <div style={{ position: "fixed", top: 14, right: 18, display: "flex", gap: 20, zIndex: 5 }}>
+          {onAdmin && <span className="link" onClick={onAdmin} style={{ color: "#6f8893", fontSize: 13 }}>Gamesmaster →</span>}
+          {onExit && <span className="link" onClick={onExit} style={{ color: "#6f8893", fontSize: 13 }}>Exit</span>}
+        </div>
+      )}
       <div className="lt-head">
         <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
         <h1 style={{ fontSize: 40, fontWeight: 900, margin: "6px 0 2px" }}>Connection Quest</h1>
