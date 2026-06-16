@@ -1170,10 +1170,10 @@ function Register({ onDone, onBack }) {
           </Field>
           <Field label="Most exotic place you've visited *"><input className="input" value={f.exotic} maxLength={40} onChange={set("exotic")} placeholder="Madagascar" /></Field>
           <Field label="Languages you speak *"><input className="input" value={f.languages} maxLength={50} onChange={set("languages")} placeholder="English, Japanese" /></Field>
-          <Field label="Day 1 table number *">
+          <Field label="Day 1 table *">
             <select className="input" value={f.table} onChange={set("table")}>
               <option value="">Select…</option>
-              {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((n) => <option key={n} value={n}>{n}</option>)}
+              {Array.from({ length: 12 }, (_, i) => String.fromCharCode(65 + i)).map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </Field>
           {err && <p style={{ color: "var(--seal)", fontSize: 13, fontWeight: 600 }}>{err}</p>}
@@ -1368,10 +1368,10 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <div className="eyebrow" style={{ color: "var(--navy)" }}>Edit my info</div>
             <h2 className="h2" style={{ marginTop: 6, marginBottom: 14 }}>Update your passport</h2>
-            <Field label="Day 1 table number">
+            <Field label="Day 1 table">
               <select className="input" value={ef.table} onChange={setE("table")}>
                 <option value="">Select…</option>
-                {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((n) => <option key={n} value={n}>{n}</option>)}
+                {Array.from({ length: 12 }, (_, i) => String.fromCharCode(65 + i)).map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </Field>
             <Field label="Team / function">
