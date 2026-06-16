@@ -469,7 +469,7 @@ function Styles() {
     .lt-statn{font-family:'Space Mono',monospace;font-weight:900;font-size:34px;color:#fff;line-height:1}
     .lt-statl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#9fb4bd;margin-top:8px;font-weight:700}
     @media (max-width:760px){
-      .lt-head{padding:16px 16px 6px}
+      .lt-head{padding:46px 16px 6px}
       .lt-head h1{font-size:26px !important;margin:4px 0 2px !important}
       .lt-head p{font-size:14px !important}
       .lt-head .eyebrow{font-size:11px}
@@ -505,31 +505,106 @@ function Styles() {
 }
 
 /* ---- Travel-themed nav icons --------------------------------------------- */
-// Explore — embedded neighbourhood guide (Google My Map). Logistics, not game mechanics.
+// Explore — embedded neighbourhood guide (Google My Map) plus a grouped, tappable list.
+const EXPLORE_MID = "1yipX0j03KYi3g0-5FpPpEWbtsFuAZnU";
+const EXPLORE_CATS = ["Tuck In", "Coffee catch-up", "After-hours"];
+const EXPLORE_PLACES = [
+  { name: "Lilyan", cat: "Tuck In", note: "Soba (buckwheat noodle). Lunch and dinner.", q: "Lilyan, Roppongi, Minato City, Tokyo" },
+  { name: "TsuruTonTan", cat: "Tuck In", note: "Udon. Good for lunch and dinner, alcohol available.", q: "TsuruTonTan Roppongi, Minato City, Tokyo" },
+  { name: "Tempura Mikaku", cat: "Tuck In", note: "Tempura. Good for a quick tendon lunch.", q: "Tempura Mikaku, Roppongi, Minato City, Tokyo" },
+  { name: "Imakatsu Roppongi", cat: "Tuck In", note: "Famous chicken tender cutlet.", q: "Imakatsu Roppongi, Minato City, Tokyo" },
+  { name: "Ippudo Roppongi", cat: "Tuck In", note: "Tonkotsu (pork bone broth) ramen.", q: "Ippudo Roppongi, Minato City, Tokyo" },
+  { name: "Burger Revolution Tokyo Roppongi", cat: "Tuck In", note: "Who does not like burgers?", q: "Burger Revolution Tokyo Roppongi, Minato City, Tokyo" },
+  { name: "PST Roppongi (Pizza Studio Tamaki)", cat: "Tuck In", note: "Pizza. 1 min from the office, book a table before you go.", q: "Pizza Studio Tamaki PST Roppongi, Minato City, Tokyo" },
+  { name: "Gonpachi Nishi-Azabu", cat: "After-hours", note: "Famous spot visited by Obama.", q: "Gonpachi Nishi-Azabu, Minato City, Tokyo" },
+  { name: "Uoshin Nogizaka", cat: "After-hours", note: "Casual izakaya.", q: "Uoshin Nogizaka, Minato City, Tokyo" },
+  { name: "Uokin Roppongi", cat: "After-hours", note: "Very casual, open for lunch and dinner.", q: "Uokin Roppongi, Minato City, Tokyo" },
+  { name: "Suju Dining Rokkaku Tokyo Midtown", cat: "After-hours", note: "Izakaya.", q: "Suju Dining Rokkaku Tokyo Midtown, Akasaka, Minato City, Tokyo" },
+  { name: "Salon de The ROND", cat: "Coffee catch-up", note: "Tea salon in a museum.", q: "Salon de The Rond, National Art Center, Roppongi, Tokyo" },
+  { name: "Ginza West Aoyama Garden", cat: "Coffee catch-up", note: "Caffeine and sweets.", q: "Ginza West Aoyama Garden, Minato City, Tokyo" },
+  { name: "Roppongi Coffee", cat: "Coffee catch-up", note: "Caffeine.", q: "Roppongi Coffee, Roppongi, Minato City, Tokyo" },
+  { name: "Starbucks Reserve Tokyo Midtown", cat: "Coffee catch-up", note: "Who doesn't know this one?", q: "Starbucks Reserve Tokyo Midtown, Akasaka, Minato City, Tokyo" },
+  { name: "Blue Bottle Coffee Roppongi Cafe", cat: "Coffee catch-up", note: "FIJ's home coffee place, just under the office.", q: "Blue Bottle Coffee Roppongi Cafe, Minato City, Tokyo" },
+  { name: "ANTICO CAFFE AL AVIS Tokyo Midtown", cat: "Tuck In", note: "Panini.", q: "Antico Caffe Al Avis Tokyo Midtown, Akasaka, Minato City, Tokyo" },
+  { name: "Nihonbashi Kaisen Don Tsujihan", cat: "Tuck In", note: "Seafood bowl. There can be a long line at lunch.", q: "Tsujihan Tokyo Midtown, Akasaka, Minato City, Tokyo" },
+  { name: "Chopped Salad Day Roppongi", cat: "Tuck In", note: "Healthy salad option.", q: "Chopped Salad Day Roppongi, Minato City, Tokyo" },
+  { name: "Ant 'n Bee Ryudocho", cat: "After-hours", note: "Local craft beer at a very casual spot.", q: "Ant n Bee Ryudocho, Minato City, Tokyo" },
+];
+
 function Explore() {
-  const MID = "1yipX0j03KYi3g0-5FpPpEWbtsFuAZnU";
+  const [focus, setFocus] = useState(null); // selected place (focused map) or null (all pins)
+  const mapRef = useRef(null);
+  const mapSrc = focus
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(focus.q)}&z=16&output=embed`
+    : `https://www.google.com/maps/d/embed?mid=${EXPLORE_MID}`;
+  const select = (pl) => {
+    setFocus(pl);
+    if (mapRef.current) mapRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   return (
     <div>
       <div className="eyebrow">Explore</div>
       <h2 style={{ margin: "6px 0 4px", fontSize: 22, color: "#fff", fontWeight: 800 }}>Neighbourhood guide</h2>
       <p style={{ color: "#c7d4dd", fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
-        Hand-picked spots a short walk from the venue. Tap a pin for the tip, then open it in Google Maps for directions.
+        Hand-picked spots a short walk from the venue. Tap a place to find it on the map, or use the pin icon to open it in Google Maps for directions.
       </p>
-      <div style={{ position: "relative", height: "min(70vh, 560px)", minHeight: 420, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "var(--navy2)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+      <div ref={mapRef} style={{ position: "relative", height: "min(70vh, 560px)", minHeight: 420, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "var(--navy2)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
         <iframe
+          key={focus ? focus.q : "all"}
           title="FIL neighbourhood map"
-          src={`https://www.google.com/maps/d/embed?mid=${MID}`}
-          style={{ position: "absolute", top: -78, left: 0, width: "100%", height: "calc(100% + 78px)", border: 0, display: "block" }}
+          src={mapSrc}
+          style={focus
+            ? { position: "absolute", inset: 0, width: "100%", height: "100%", border: 0, display: "block" }
+            : { position: "absolute", top: -78, left: 0, width: "100%", height: "calc(100% + 78px)", border: 0, display: "block" }}
           loading="lazy"
         />
+        {focus && (
+          <button onClick={() => setFocus(null)}
+            style={{ position: "absolute", top: 12, right: 12, zIndex: 4, background: "rgba(8,30,46,0.92)", color: "#fff", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 999, padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+            ← All pins
+          </button>
+        )}
       </div>
-      <a href={`https://www.google.com/maps/d/viewer?mid=${MID}`} target="_blank" rel="noopener noreferrer"
+      <a href={`https://www.google.com/maps/d/viewer?mid=${EXPLORE_MID}`} target="_blank" rel="noopener noreferrer"
         style={{ display: "inline-block", marginTop: 12, color: "var(--gold)", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
         Open the full map in Google Maps →
       </a>
+
+      <div style={{ marginTop: 22 }}>
+        {EXPLORE_CATS.map((cat) => {
+          const items = EXPLORE_PLACES.filter((p) => p.cat === cat);
+          if (!items.length) return null;
+          return (
+            <div key={cat} style={{ marginBottom: 18 }}>
+              <div className="eyebrow" style={{ marginBottom: 8 }}>{cat}</div>
+              <div style={{ border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
+                {items.map((p, i) => {
+                  const active = focus && focus.q === p.q;
+                  return (
+                    <div key={p.q} onClick={() => select(p)}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", cursor: "pointer", borderTop: i ? "1px solid var(--line)" : "none", background: active ? "rgba(78,163,214,0.16)" : "transparent" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                        <div style={{ color: "#9fb4bd", fontSize: 12, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.note}</div>
+                      </div>
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.q)}`}
+                        target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Open in Google Maps"
+                        style={{ flex: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 9, border: "1px solid var(--line)", color: "var(--gold)", textDecoration: "none" }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.3" /></svg>
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+
 
 function TabIcon({ name }) {
   const p = { width: 23, height: 23, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
@@ -1918,6 +1993,9 @@ function RoomNetwork({ players, pairs }) {
   const seenRef = useRef(new Set());  // pair keys already drawn
   const primedRef = useRef(false);   // first ingest: don't animate the whole backlog
   const [hud, setHud] = useState({ conn: 0, bridges: 0, markets: 0, lit: 0, total: 0, full: false });
+  const posRef = useRef({});        // id -> [x,y] latest on-screen positions, for hover hit-testing
+  const hoverRef = useRef(null);    // currently hovered id (dedupes re-renders)
+  const [hover, setHover] = useState(null);
 
   useEffect(() => {
     const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
@@ -1965,6 +2043,26 @@ function RoomNetwork({ players, pairs }) {
     const resize = () => { const r = cv.getBoundingClientRect(); DPR = Math.min(2, window.devicePixelRatio || 1); W = r.width; Hh = r.height; cv.width = Math.max(1, W * DPR); cv.height = Math.max(1, Hh * DPR); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); };
     resize();
     let ro; if (window.ResizeObserver) { ro = new ResizeObserver(resize); ro.observe(cv); } else window.addEventListener("resize", resize);
+    const onMove = (e) => {
+      const r = cv.getBoundingClientRect();
+      const mxp = e.clientX - r.left, myp = e.clientY - r.top;
+      const pos = posRef.current; let best = null, bestD = 16 * 16;
+      for (const id in pos) { const P = pos[id]; if (!P) continue; const dx = P[0] - mxp, dy = P[1] - myp, d = dx * dx + dy * dy; if (d < bestD) { bestD = d; best = { id, x: P[0], y: P[1] }; } }
+      const id = best ? best.id : null;
+      if (id !== hoverRef.current) { hoverRef.current = id; setHover(best); }
+    };
+    const onLeave = () => { hoverRef.current = null; setHover(null); };
+    const onTap = (e) => {
+      const r = cv.getBoundingClientRect();
+      const mxp = e.clientX - r.left, myp = e.clientY - r.top;
+      const pos = posRef.current; let best = null, bestD = 20 * 20; // larger target for fingers
+      for (const id in pos) { const P = pos[id]; if (!P) continue; const dx = P[0] - mxp, dy = P[1] - myp, d = dx * dx + dy * dy; if (d < bestD) { bestD = d; best = { id, x: P[0], y: P[1] }; } }
+      hoverRef.current = best ? best.id : null;
+      setHover(best); // tap a node to show, tap empty space to dismiss
+    };
+    cv.addEventListener("mousemove", onMove);
+    cv.addEventListener("mouseleave", onLeave);
+    cv.addEventListener("click", onTap);
     const mx = 0.045;
     const px = (n, t) => (mx + n.nx * (1 - 2 * mx)) * W + Math.sin(t / 2600 + n.ph) * W * 0.006;
     const py = (n, t) => (n.ny) * Hh + Math.cos(t / 2400 + n.ph) * Hh * 0.006;
@@ -1973,6 +2071,7 @@ function RoomNetwork({ players, pairs }) {
       ctx.clearRect(0, 0, W, Hh);
       const nodes = nodesRef.current, ids = orderRef.current, pos = {};
       ids.forEach((id) => { const n = nodes[id]; pos[id] = [px(n, t), py(n, t)]; });
+      posRef.current = pos;
       ctx.lineCap = "round";
       const edges = edgesRef.current;
       for (let e = 0; e < edges.length; e++) {
@@ -2001,7 +2100,7 @@ function RoomNetwork({ players, pairs }) {
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    return () => { cancelAnimationFrame(raf); if (ro) ro.disconnect(); else window.removeEventListener("resize", resize); };
+    return () => { cancelAnimationFrame(raf); cv.removeEventListener("mousemove", onMove); cv.removeEventListener("mouseleave", onLeave); cv.removeEventListener("click", onTap); if (ro) ro.disconnect(); else window.removeEventListener("resize", resize); };
   }, []);
 
   const pct = hud.total ? Math.round(hud.lit / hud.total * 100) : 0;
@@ -2009,7 +2108,21 @@ function RoomNetwork({ players, pairs }) {
     <div className="lt-card">
       <div className="lt-h2">The room · live network</div>
       <div className="rn-stage" style={{ position: "relative", width: "100%", aspectRatio: "16 / 6", minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
-        <canvas ref={cvRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+        <canvas ref={cvRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: hover ? "pointer" : "default" }} />
+        {hover && (() => {
+          const p = (players || []).find((x) => x.id === hover.id);
+          const n = nodesRef.current[hover.id];
+          const name = (p && p.name) || (n && n.name) || "Guest";
+          const market = (p && p.market) || "";
+          const total = p ? (p.total || 0) : 0;
+          const below = hover.y < 46;
+          return (
+            <div style={{ position: "absolute", left: hover.x, top: hover.y, transform: below ? "translate(-50%, 28%)" : "translate(-50%, -130%)", pointerEvents: "none", zIndex: 6, background: "rgba(8,30,46,0.96)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, padding: "6px 10px", whiteSpace: "nowrap", boxShadow: "0 6px 16px rgba(0,0,0,.4)" }}>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{name}</div>
+              <div style={{ color: "#9fb4bd", fontSize: 11, marginTop: 1 }}>{market}{total ? " · " + total + " pts" : ""}</div>
+            </div>
+          );
+        })()}
         <div className="rn-cap" style={{ position: "absolute", left: 16, top: 14, pointerEvents: "none" }}>
           <div style={{ fontSize: 13, color: "#9fb4bd" }}>Each dot is a guest. Each line is a connection.</div>
         </div>
