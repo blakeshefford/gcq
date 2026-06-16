@@ -6,7 +6,7 @@
 <style>html,body{margin:0;height:100%;background:#00314a}#root{min-height:100%}</style></head>
 <body><div id="root"></div>
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useLayoutEffect, useRef, useCallback } = React;
 const SUPABASE_URL = "https://ytfvaoddykoqfhpyqzcj.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_k810-xD8BHBDuPOBjx3eoA_9mgymeWR";
 const CONFIGURED = !/YOUR-/.test(SUPABASE_URL) && !/YOUR-/.test(SUPABASE_ANON_KEY);
@@ -562,19 +562,25 @@ function AnnounceBar() {
     return () => { live = false; clearInterval(t); };
   }, []);
   const shown = !!(ann && ann.id !== dismissed);
-  // Reserve the bar's real height (it can wrap on small screens) plus breathing
-  // room, exposed as --annH so the spacer below and the sticky points header
-  // both clear the fixed bar.
-  useEffect(() => {
+  const [barH, setBarH] = useState(0);
+  // Measure the bar's real height before paint and reserve that space, so the
+  // sticky points header always clears the fixed bar even if the text wraps.
+  // The spacer is state-driven (never a collapsed CSS-var) so it can't ride up.
+  useLayoutEffect(() => {
     const root = typeof document !== "undefined" ? document.documentElement : null;
-    if (!root) return;
-    if (!shown) { root.style.setProperty("--annH", "0px"); return; }
-    const measure = () => { if (barRef.current) root.style.setProperty("--annH", (barRef.current.offsetHeight + 14) + "px"); };
+    if (!shown) { if (root) root.style.setProperty("--annH", "0px"); return; }
+    const measure = () => {
+      if (!barRef.current) return;
+      const h = barRef.current.offsetHeight;
+      setBarH(h);
+      if (root) root.style.setProperty("--annH", (h + 14) + "px");
+    };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [shown, ann]);
   if (!shown) return null;
+  const reserve = barH ? barH + 14 : 58;
   return (
     <>
       <div className="announce" ref={barRef}>
@@ -582,7 +588,7 @@ function AnnounceBar() {
         <span>{ann.text}</span>
         <span className="ann-x" onClick={() => setDismissed(ann.id)}>×</span>
       </div>
-      <div aria-hidden="true" style={{ height: "var(--annH, 60px)" }} />
+      <div aria-hidden="true" style={{ height: reserve }} />
     </>
   );
 }
