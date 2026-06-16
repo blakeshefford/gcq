@@ -776,7 +776,7 @@ function App() {
           </div>
         </div>
         <div className="nav">
-          {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["explore", "Explore"], ["missions", "Quests"]].map(([k, l]) => (
+          {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["missions", "Quests"], ["explore", "Explore"]].map(([k, l]) => (
             <button key={k} className={"tab" + (tab === k ? " on" : "")} onClick={() => navTo(k)}>
               <TabIcon name={k} /><span>{l}</span><span className="dot" />
             </button>
