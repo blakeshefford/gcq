@@ -512,11 +512,11 @@ function Explore() {
       <p style={{ color: "#5a6b73", fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
         Hand-picked spots a short walk from the venue. Tap a pin for the tip, then open it in Google Maps for directions.
       </p>
-      <div style={{ border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "#e9eef0", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+      <div style={{ position: "relative", height: "min(72vh, 640px)", minHeight: 440, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "#e9eef0", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
         <iframe
           title="FIL neighbourhood map"
           src={`https://www.google.com/maps/d/embed?mid=${MID}`}
-          style={{ width: "100%", height: "min(72vh, 640px)", minHeight: 440, border: 0, display: "block" }}
+          style={{ position: "absolute", top: -64, left: 0, width: "100%", height: "calc(100% + 64px)", border: 0, display: "block" }}
           loading="lazy"
         />
       </div>
