@@ -502,6 +502,32 @@ function Styles() {
 }
 
 /* ---- Travel-themed nav icons --------------------------------------------- */
+// Explore — embedded neighbourhood guide (Google My Map). Logistics, not game mechanics.
+function Explore() {
+  const MID = "1yipX0j03KYi3g0-5FpPpEWbtsFuAZnU";
+  return (
+    <div>
+      <div className="eyebrow">Explore</div>
+      <h2 style={{ margin: "6px 0 4px", fontSize: 22, color: "var(--navy)", fontWeight: 800 }}>Neighbourhood guide</h2>
+      <p style={{ color: "#5a6b73", fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
+        Hand-picked spots a short walk from the venue. Tap a pin for the tip, then open it in Google Maps for directions.
+      </p>
+      <div style={{ border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "#e9eef0", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+        <iframe
+          title="FIL neighbourhood map"
+          src={`https://www.google.com/maps/d/embed?mid=${MID}`}
+          style={{ width: "100%", height: "min(72vh, 640px)", minHeight: 440, border: 0, display: "block" }}
+          loading="lazy"
+        />
+      </div>
+      <a href={`https://www.google.com/maps/d/viewer?mid=${MID}`} target="_blank" rel="noopener noreferrer"
+        style={{ display: "inline-block", marginTop: 12, color: "var(--green)", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
+        Open the full map in Google Maps →
+      </a>
+    </div>
+  );
+}
+
 function TabIcon({ name }) {
   const p = { width: 23, height: 23, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
   switch (name) {
@@ -510,6 +536,7 @@ function TabIcon({ name }) {
     case "quiz": return (<svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 6.6l2.3 5.4-2.3 5.4-2.3-5.4z" /><circle cx="12" cy="12" r="0.7" fill="currentColor" stroke="none" /></svg>);
     case "learn": return (<svg {...p}><path d="M9 4 3 6.2v13.6l6-2.2 6 2.2 6-2.2V4l-6 2.2L9 4z" /><path d="M9 4v13.6" /><path d="M15 6.2v13.6" /></svg>);
     case "missions": return (<svg {...p}><path d="M6 21V4" /><path d="M6 4.5h11l-2.6 3.2 2.6 3.2H6" /></svg>);
+    case "explore": return (<svg {...p}><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.3" /></svg>);
     default: return null;
   }
 }
@@ -744,11 +771,12 @@ function App() {
             {tab === "connect" && <Connect me={me} flash={flash} ping={ping} setMe={setMe} refresh={refresh} collected={collected} askKnew={askKnew} />}
             {tab === "quiz" && <QuizHub me={me} ping={ping} setMe={setMe} refresh={refresh} askKnew={askKnew} />}
             {tab === "learn" && <Learn me={me} ping={ping} setMe={setMe} refresh={refresh} />}
+            {tab === "explore" && <Explore />}
             {tab === "missions" && <Missions me={me} total={total} ping={ping} setMe={setMe} refresh={refresh} />}
           </div>
         </div>
         <div className="nav">
-          {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["missions", "Quests"]].map(([k, l]) => (
+          {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["explore", "Explore"], ["missions", "Quests"]].map(([k, l]) => (
             <button key={k} className={"tab" + (tab === k ? " on" : "")} onClick={() => navTo(k)}>
               <TabIcon name={k} /><span>{l}</span><span className="dot" />
             </button>
