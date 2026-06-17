@@ -60,7 +60,7 @@ const PTS = {
   trioBonus: 150,     // meet 3 different markets
   fullPassport: 300,  // collect every market
   table: 75,          // table challenge complete
-  earlyBird: 100,     // first few people globally to make a connection
+  earlyBird: 50,      // first few people globally to make a connection
   stampMilestone: 200,// at 8 markets, then +200 for every market beyond
 };
 
@@ -76,15 +76,76 @@ const RANKS = [
   { min: 1500, name: "Global Citizen" },
 ];
 
-// ---- Missions (honour-system + auto-complete) ------------------------------
+// ---- Quests (all auto-complete from in-app activity) -----------------------
 const MISSIONS = [
-  { id: "m_code", label: "Enter a peer's 4-digit Connect Code", pts: 15, auto: "firstConnect" },
-  { id: "m_coffee", label: "Meet a new market peer during the morning coffee break", pts: 10 },
-  { id: "m_trivia", label: "Run a Pop Quiz with someone new", pts: 20, auto: "firstTrivia" },
-  { id: "m_3market", label: "Collect stamps from 3 different markets", pts: 25, auto: "trio" },
-  { id: "m_learn", label: "Complete a Japan culture challenge with a colleague", pts: 20, auto: "culture" },
-  { id: "m_apac", label: "Earn full points on any market quiz", pts: 20, auto: "apacQuiz" },
+  { id: "q_first",     name: "First Connection", desc: "Connect with your first peer",      icon: "connect",   grad: ["#27457f", "#16294d"], pts: 20, auto: true },
+  { id: "q_earlybird", name: "Early Bird",        desc: "First 10 to connect",              icon: "sunrise",   grad: ["#e8a04a", "#d4842f"], pts: 50, auto: true },
+  { id: "q_hobby",     name: "Hobby Twin",        desc: "Two people share your hobby",      icon: "twin",      grad: ["#5b8def", "#3f6fd8"], pts: 50, auto: true },
+  { id: "q_vet",       name: "Veteran & Rookie",  desc: "Connect with 2 different FIL tenures", icon: "hourglass", grad: ["#d8ad4e", "#c2922f"], pts: 20, auto: true },
+  { id: "q_wander",    name: "Wanderlust Match",  desc: "Shared most exotic place",         icon: "compass",   grad: ["#3f9e7c", "#2c7d61"], pts: 50, auto: true },
+  { id: "q_passport",  name: "Passport Twin",     desc: "Same nationality, new market",     icon: "passport",  grad: ["#4a78d0", "#345fb0"], pts: 20, auto: true },
+  { id: "q_speed",     name: "Speed Round",       desc: "5 connections in 15 minutes",      icon: "stopwatch", grad: ["#e0607a", "#c8455f"], pts: 50, auto: true },
+  { id: "q_social",    name: "Social Butterfly",  desc: "Reach 30 connections",             icon: "people",    grad: ["#2bb3c0", "#1f8f9a"], pts: 40, auto: true },
+  { id: "q_region",    name: "Around the Region", desc: "Stamps from 5 markets",            icon: "map",       grad: ["#4ea3d6", "#2f86bd"], pts: 30, auto: true },
+  { id: "q_homeaway",  name: "Home & Away",       desc: "Meet the furthest market",         icon: "plane",     grad: ["#e8a04a", "#d4842f"], pts: 30, auto: true },
+  { id: "q_scholar",   name: "Market Scholar",    desc: "Ace 3 market quizzes",             icon: "cap",       grad: ["#8f6fb0", "#6f4f92"], pts: 30, auto: true },
+  { id: "q_tablelead", name: "Table Lead",        desc: "Top your table by 3.00pm",         icon: "crown",     grad: ["#d8ad4e", "#bf8b2a"], pts: 15, auto: true },
+  { id: "q_recall",    name: "Perfect Recall",    desc: "Score 3/3 on a Pop Quiz",          icon: "target",    grad: ["#3a63a8", "#274784"], pts: 30, auto: true },
+  { id: "q_unforget",  name: "Unforgettable",     desc: "Someone aces a quiz on you",       icon: "star",      grad: ["#e0607a", "#c8455f"], pts: 15, auto: true },
+  { id: "q_dinner",    name: "Dinner Doer",       desc: "3 connections at dinner",          icon: "dining",    grad: ["#3f9e7c", "#2c7d61"], pts: 30, auto: true },
 ];
+// point lookup by quest id (single source of truth)
+const QP = Object.fromEntries(MISSIONS.map((m) => [m.id, m.pts]));
+
+// ---- Quest config ----------------------------------------------------------
+// Times are fixed UTC epochs for the JST event schedule, so they don't depend on
+// the device timezone (Date.now() is UTC ms everywhere). Event: Mon 22 Jun 2026 JST.
+const DINNER_START = Date.UTC(2026, 5, 22, 8, 45, 0);   // 17:45 JST
+const DINNER_END   = Date.UTC(2026, 5, 22, 12, 0, 0);   // 21:00 JST
+const TABLE_LEAD_AT = Date.UTC(2026, 5, 22, 6, 0, 0);   // 15:00 JST
+const SPEED_WINDOW_MS = 15 * 60 * 1000;                 // rolling 15 minutes
+const SPEED_TARGET = 5;
+const DINNER_TARGET = 3;
+const SOCIAL_TARGET = 30;
+const REGION_TARGET = 5;
+const SCHOLAR_TARGET = 3;
+const HOBBY_TARGET = 2;
+const VET_TARGET = 2;     // collectable twice, for two distinct different brackets
+
+// rough city coords per market, for "furthest market from yours"
+const MARKET_COORDS = {
+  "Australia": [-33.87, 151.21], "Canada": [43.65, -79.38], "Hong Kong": [22.32, 114.17],
+  "Japan": [35.68, 139.69], "Korea": [37.57, 126.98], "Mainland China": [31.23, 121.47],
+  "Singapore": [1.35, 103.82], "Spain": [40.42, -3.70],
+};
+function haversine(a, b) {
+  if (!a || !b) return 0;
+  const R = 6371, toR = Math.PI / 180;
+  const dLat = (b[0] - a[0]) * toR, dLng = (b[1] - a[1]) * toR;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+function furthestMarket(m) {
+  const here = MARKET_COORDS[m]; if (!here) return null;
+  let best = null, bestD = -1;
+  for (const k of Object.keys(MARKET_COORDS)) {
+    if (k === m) continue;
+    const d = haversine(here, MARKET_COORDS[k]);
+    if (d > bestD) { bestD = d; best = k; }
+  }
+  return best;
+}
+
+// free-text token matching (for hobbies + exotic place)
+const STOP = new Set(["the", "a", "an", "of", "and", "in", "at", "to", "de", "la", "el", "my", "our", "with", "city", "town", "near", "for"]);
+function toks(s) { return String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 1 && !STOP.has(w)); }
+function shareToken(a, b) { if (!a || !b) return false; const A = new Set(toks(a)); return toks(b).some((w) => A.has(w)); }
+// does any of my hobbies token-overlap any of theirs?
+function hobbyOverlap(mine, theirs) {
+  const M = (mine || []).filter(Boolean), T = (theirs || []).filter(Boolean);
+  for (const h of M) for (const g of T) if (shareToken(h, g)) return h;
+  return null;
+}
 
 // ---- Dinner icebreakers (leadership-tuned) ---------------------------------
 const ICEBREAKERS = [
@@ -163,11 +224,11 @@ const JAPAN_QUIZ = [
 
 // ---- Peer-verified Japan culture challenges (done together, code-confirmed) -
 const CULTURE = [
-  { id: "bow", t: "The bow", d: "Greet a new contact with a proper bow — about 15°, back straight, eyes lowered.", pts: 15 },
-  { id: "meishi", t: "Meishi exchange", d: "Swap business cards two-handed, card facing them, and read theirs before pocketing it.", pts: 15 },
-  { id: "phrase", t: "Say it in Japanese", d: "Teach each other one phrase. Try \u201cHajimemashite\u201d (pleased to meet you).", pts: 15 },
-  { id: "kanpai", t: "Kanpai!", d: "Share a drink with someone new and say \u201cKanpai!\u201d together before the first sip.", pts: 10 },
-  { id: "itadakimasu", t: "Itadakimasu", d: "Before eating together, say \u201cItadakimasu\u201d to give thanks for the meal.", pts: 10 },
+  { id: "bow", t: "The bow", d: "Greet a new contact with a proper bow — about 15°, back straight, eyes lowered.", pts: 15, icon: "bow", grad: ["#27457f", "#16294d"] },
+  { id: "meishi", t: "Meishi exchange", d: "Swap business cards two-handed, card facing them, and read theirs before pocketing it.", pts: 15, icon: "card", grad: ["#5b8def", "#3f6fd8"] },
+  { id: "phrase", t: "Say it in Japanese", d: "Teach each other one phrase. Try \u201cHajimemashite\u201d (pleased to meet you).", pts: 15, icon: "speech", grad: ["#3f9e7c", "#2c7d61"] },
+  { id: "kanpai", t: "Kanpai!", d: "Share a drink with someone new and say \u201cKanpai!\u201d together before the first sip.", pts: 10, icon: "drink", grad: ["#e0607a", "#c8455f"] },
+  { id: "itadakimasu", t: "Itadakimasu", d: "Before eating together, say \u201cItadakimasu\u201d to give thanks for the meal.", pts: 10, icon: "bowl", grad: ["#e8a04a", "#d4842f"] },
 ];
 
 // ---- APAC business quiz, by market (explanations double as the fast facts) --
@@ -368,7 +429,7 @@ function Styles() {
     .stmp .inkrot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
     .stmp .ink{width:88%;height:88%;animation:stampin .6s cubic-bezier(.2,1.55,.35,1) both}
     .stmp svg{width:100%;height:100%;display:block}
-    .stmp-name{font-size:9px;font-weight:700;color:var(--muted);text-align:center;line-height:1.05;
+    .stmp-name{font-size:11px;font-weight:700;color:var(--muted);text-align:center;line-height:1.05;
       letter-spacing:.01em;min-height:22px}
     .stmpwrap.got .stmp-name{color:var(--navy)}
     @keyframes stampin{0%{opacity:0;transform:scale(2.5)}55%{opacity:1}70%{transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
@@ -531,6 +592,7 @@ const EXPLORE_PLACES = [
   { name: "Ant 'n Bee Ryudocho", cat: "After-hours", note: "Local craft beer at a very casual spot.", q: "Ant n Bee Ryudocho, Minato City, Tokyo" },
 ];
 
+const PIN_COLORS = [["#5b8def", "#3f6fd8"], ["#3f9e7c", "#2c7d61"], ["#d8ad4e", "#c2922f"], ["#e0607a", "#c8455f"], ["#8f6fb0", "#6f4f92"], ["#2bb3c0", "#1f8f9a"], ["#4ea3d6", "#2f86bd"], ["#e8a04a", "#d4842f"]];
 function Explore() {
   const [focus, setFocus] = useState(null); // selected place (focused map) or null (all pins)
   const mapRef = useRef(null);
@@ -543,12 +605,11 @@ function Explore() {
   };
   return (
     <div>
-      <div className="eyebrow">Explore</div>
       <h2 style={{ margin: "6px 0 4px", fontSize: 22, color: "#fff", fontWeight: 800 }}>Neighbourhood guide</h2>
       <p style={{ color: "#c7d4dd", fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
-        Hand-picked spots a short walk from the venue. Tap a place to find it on the map, or use the pin icon to open it in Google Maps for directions.
+        Hand-picked spots nearby. Tap a place to find it on the map, or use the pin icon to open it in Google Maps for directions.
       </p>
-      <div ref={mapRef} style={{ position: "relative", height: "min(70vh, 560px)", minHeight: 420, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "var(--navy2)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
+      <div ref={mapRef} style={{ position: "relative", height: "min(35vh, 280px)", minHeight: 210, border: "1px solid var(--line)", borderRadius: 14, overflow: "hidden", background: "var(--navy2)", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }}>
         <iframe
           key={focus ? focus.q : "all"}
           title="FIL neighbourhood map"
@@ -566,8 +627,8 @@ function Explore() {
         )}
       </div>
       <a href={`https://www.google.com/maps/d/viewer?mid=${EXPLORE_MID}`} target="_blank" rel="noopener noreferrer"
-        style={{ display: "inline-block", marginTop: 12, color: "var(--gold)", fontWeight: 700, fontSize: 13, textDecoration: "none" }}>
-        Open the full map in Google Maps →
+        className="backbtn" style={{ marginTop: 12, textDecoration: "none" }}>
+        Open the full map in Google Maps
       </a>
 
       <div style={{ marginTop: 22 }}>
@@ -577,20 +638,24 @@ function Explore() {
           return (
             <div key={cat} style={{ marginBottom: 18 }}>
               <div className="eyebrow" style={{ marginBottom: 8 }}>{cat}</div>
-              <div style={{ border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden" }}>
-                {items.map((p, i) => {
+              <div style={{ display: "grid", gap: 8 }}>
+                {items.map((p) => {
                   const active = focus && focus.q === p.q;
+                  const c = PIN_COLORS[EXPLORE_CATS.indexOf(cat) % PIN_COLORS.length];
                   return (
                     <div key={p.q} onClick={() => select(p)}
-                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", cursor: "pointer", borderTop: i ? "1px solid var(--line)" : "none", background: active ? "rgba(78,163,214,0.16)" : "transparent" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", cursor: "pointer", background: "var(--paper)", border: "1px solid " + (active ? c[1] : "var(--line)"), borderRadius: 12, boxShadow: active ? `0 0 0 2px ${c[1]}22` : "0 1px 0 rgba(0,0,0,.04)" }}>
+                      <div style={{ flex: "none", width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(155deg, ${c[0]}, ${c[1]})`, boxShadow: "0 2px 6px rgba(20,40,70,.18)" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.3" /></svg>
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
-                        <div style={{ color: "#9fb4bd", fontSize: 12, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.note}</div>
+                        <div style={{ color: "var(--navy)", fontWeight: 800, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                        <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.note}</div>
                       </div>
                       <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.q)}`}
                         target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Open in Google Maps"
-                        style={{ flex: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: 9, border: "1px solid var(--line)", color: "var(--gold)", textDecoration: "none" }}>
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z" /><circle cx="12" cy="11" r="2.3" /></svg>
+                        style={{ flex: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: 9, border: "1px solid var(--line)", color: "var(--muted)", textDecoration: "none" }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7" /><path d="M8 7h9v9" /></svg>
                       </a>
                     </div>
                   );
@@ -662,7 +727,6 @@ function AnnounceBar() {
   return (
     <>
       <div className="announce" ref={barRef}>
-        <span className="ann-ico">📣</span>
         <span>{ann.text}</span>
         <span className="ann-x" onClick={() => setDismissed(ann.id)}>×</span>
       </div>
@@ -679,6 +743,7 @@ function App() {
   const [toast, setToast] = useState(null);
   const [flash, setFlash] = useState(null);
   const [connAlert, setConnAlert] = useState(null);
+  const [questAlert, setQuestAlert] = useState(null); // {title, sub, tally} quest popup
   const [backable, setBackable] = useState(false);
   const [knewAsk, setKnewAsk] = useState(null); // {name} -> "did you already know them?"
   const navStack = useRef([]);
@@ -758,6 +823,13 @@ function App() {
     return () => clearTimeout(t);
   }, [connAlert]);
 
+  // show the quest alert only once the "had you met" modal is gone, then auto-dismiss after 5 seconds
+  useEffect(() => {
+    if (!questAlert || knewAsk) return;
+    const t = setTimeout(() => setQuestAlert(null), 5000);
+    return () => clearTimeout(t);
+  }, [questAlert, knewAsk]);
+
   const ping = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
 
   // boot: check URL for screen/admin mode
@@ -805,17 +877,43 @@ function App() {
     }
     const fl = await sget("flash:current");
     setFlash(fl && fl.endsAt > Date.now() ? fl : null);
-    // fold any inbound connections into my connections (for stamps + dedupe)
+    // fold any inbound connections into my connections (for stamps + dedupe + quest data)
     let changed = false;
     const cons = [...(rec.connections || [])];
     for (const e of evs.filter((x) => x.type === "connection")) {
-      if (!cons.some((c) => c.id === e.fromId)) { cons.push({ id: e.fromId, name: e.fromName, market: e.fromMarket, team: e.fromTeam || "", in: true }); changed = true; }
+      if (!cons.some((c) => c.id === e.fromId)) {
+        cons.push({ id: e.fromId, name: e.fromName, market: e.fromMarket, team: e.fromTeam || "", hobbies: e.fromHobbies || [], exotic: e.fromExotic || "", nationality: e.fromNationality || "", tenure: e.fromTenure || "", ts: e.ts, in: true });
+        changed = true;
+      }
     }
     let next = rec;
     if (changed) { next = { ...rec, connections: cons }; }
-    // auto-awards: trio + full passport
+    // auto-awards + quests
     next = await applyAutoAwards(next, evs);
+    let qAlerts = next._questAlerts || [];
+    if (next._questAlerts) { next = { ...next }; delete next._questAlerts; }
+    // Table Lead — top of your table at 15:00 JST, frozen once and shared per table
+    if (Date.now() >= TABLE_LEAD_AT && !next.tableLeadDone && next.table) {
+      try {
+        let lead = await sget("tablelead:" + next.table);
+        if (!lead) {
+          const kv = await sgetAllKV("score:");
+          const mates = kv.map((r) => r.value).filter((s) => s && s.table === next.table);
+          const max = mates.reduce((m, s) => Math.max(m, s.total || 0), 0);
+          const winners = max > 0 ? mates.filter((s) => (s.total || 0) === max).map((s) => s.id) : [];
+          lead = { winners, score: max, frozenAt: Date.now() };
+          await sset("tablelead:" + next.table, lead);
+        }
+        const won = lead.winners && lead.winners.includes(next.id);
+        next = { ...next, tableLeadDone: true };
+        if (won && !(next.missions && next.missions.q_tablelead)) {
+          next = { ...next, selfPoints: (next.selfPoints || 0) + QP.q_tablelead, missions: { ...(next.missions || {}), q_tablelead: true } };
+          qAlerts = qAlerts.concat([{ name: "Table Lead", icon: "crown", grad: ["#d8ad4e", "#bf8b2a"], done: true, sub: `+${QP.q_tablelead} points` }]);
+        }
+      } catch (e) {}
+    }
     setMe(next);
+    if (qAlerts.length) setQuestAlert(qAlerts[qAlerts.length - 1]);
     if (changed || next !== rec) await sset("users:" + next.id, next);
     const finalTotal = (next.selfPoints || 0) + sum(evs, (e) => e.points);
     await sset("score:" + next.id, { id: next.id, name: next.name, market: next.market, total: finalTotal, table: next.table || "", charity: next.charity || "", newConnections: next.newConnections || 0 });
@@ -878,12 +976,7 @@ function App() {
               <div className="codebar-val mono">{me.code}</div>
             </div>
           </div>
-          {backable && (
-            <button className="backbtn" onClick={goBack}>
-              <span style={{ fontSize: 16, lineHeight: 1 }}>‹</span> Back
-            </button>
-          )}
-          {flash && <div className="flash" style={{ marginBottom: 14 }}>⚡ {flash.title} — {flash.desc}{flash.mult > 1 ? `  (×${flash.mult} points!)` : ""}</div>}
+          {flash && <div className="flash" style={{ marginBottom: 14 }}>{flash.title} — {flash.desc}{flash.mult > 1 ? `  (×${flash.mult} points!)` : ""}</div>}
           <div style={{ overflowX: "clip" }}>
             {tab === "passport" && <Passport me={me} total={total} inbox={inbox} collected={collected} ping={ping} setMe={setMe} refresh={refresh} />}
             {tab === "connect" && <Connect me={me} flash={flash} ping={ping} setMe={setMe} refresh={refresh} collected={collected} askKnew={askKnew} />}
@@ -905,24 +998,46 @@ function App() {
       {knewAsk && (
         <div className="modal" style={{ alignItems: "center" }} onClick={() => setKnewAsk(null)}>
           <div className="sheet" style={{ borderRadius: 18, maxWidth: 360, margin: "0 16px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="eyebrow" style={{ color: "var(--navy)" }}>Quick one</div>
-            <h2 className="h2" style={{ marginTop: 6, marginBottom: 6 }}>Had you met {knewAsk.name} before today?</h2>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>Just for the stats — it doesn't change your points. We're counting how many brand-new connections the Quest sparks.</p>
+            <h2 className="h2" style={{ marginTop: 0, marginBottom: 6 }}>Had you met {knewAsk.name} before today?</h2>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>Just for the stats. It won't change your points.</p>
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => answerKnew(true)}>Yes, we'd met</button>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => answerKnew(false)}>No — brand new!</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => answerKnew(false)}>No, brand new!</button>
             </div>
           </div>
         </div>
       )}
       {connAlert && (
-        <div className="conn-alert" onClick={() => setConnAlert(null)}>
-          <div className="conn-alert-card">
-            <div className="conn-alert-eyebrow">⚡ New connection</div>
-            <div className="conn-alert-name">{connAlert.name}</div>
-            {connAlert.market && <div className="conn-alert-mk">{connAlert.market}</div>}
-            <div className="conn-alert-pts">+{connAlert.points} points</div>
-            <div className="conn-alert-tap">Tap to dismiss</div>
+        <div className="modal" style={{ alignItems: "center" }} onClick={() => setConnAlert(null)}>
+          <div className="sheet" style={{ borderRadius: 18, maxWidth: 360, margin: "0 16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 58, height: 58, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(155deg, #5b8def, #3f6fd8)", boxShadow: "0 4px 11px rgba(20,40,70,.20)" }}>
+                <QIcon name="connect" stroke="#fff" size={28} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div className="eyebrow" style={{ color: "var(--navy)" }}>New connection</div>
+                <h2 className="h2" style={{ margin: "4px 0 3px" }}>{connAlert.name}</h2>
+                <p className="muted" style={{ fontSize: 13, margin: 0 }}>{connAlert.market ? connAlert.market + " · " : ""}+{connAlert.points} points</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {questAlert && !knewAsk && (
+        <div className="modal" style={{ alignItems: "center" }} onClick={() => setQuestAlert(null)}>
+          <div className="sheet" style={{ borderRadius: 18, maxWidth: 360, margin: "0 16px" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 58, height: 58, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: questAlert.grad ? `linear-gradient(155deg, ${questAlert.grad[0]}, ${questAlert.grad[1]})` : "var(--navy)", boxShadow: "0 4px 11px rgba(20,40,70,.20)" }}>
+                <QIcon name={questAlert.icon || "star"} stroke="#fff" size={28} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div className="eyebrow" style={{ color: "var(--navy)" }}>{questAlert.done ? "Quest Completed!" : "Quest nearly complete"}</div>
+                <h2 className="h2" style={{ margin: "4px 0 3px" }}>{questAlert.name || questAlert.title}</h2>
+                {(questAlert.tally || questAlert.sub) && (
+                  <p className="muted" style={{ fontSize: 13, margin: 0 }}>{questAlert.tally ? questAlert.tally + (questAlert.sub ? " · " : "") : ""}{questAlert.sub || ""}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -940,21 +1055,93 @@ function collectedMarkets(me) {
 }
 async function applyAutoAwards(rec, evs) {
   let next = rec;
+  const alerts = [];
+  const has = (id) => !!(next.missions && next.missions[id]);
+  const mInfo = (id) => MISSIONS.find((x) => x.id === id) || {};
+  const award = (id, extra) => {
+    if (has(id)) return;
+    next = { ...next, selfPoints: (next.selfPoints || 0) + QP[id], missions: { ...(next.missions || {}), [id]: true } };
+    const mi = mInfo(id);
+    alerts.push({ name: mi.name, icon: mi.icon, grad: mi.grad, done: true, sub: `+${QP[id]} points`, ...(extra || {}) });
+  };
   const cols = collectedMarkets(next);
-  // Trio bonus
-  if (cols.length >= 3 && !next.trioAwarded) {
-    next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus, missions: { ...next.missions, m_3market: true } };
-  }
-  // Full passport
-  if (cols.length >= MARKETS.length && !next.fullAwarded) {
-    next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
-  }
-  // Stamp milestone: +200 at 8 markets, then +200 for each market beyond (runs alongside the above)
-  const units = Math.max(0, cols.length - (STAMP_MILESTONE_AT - 1)); // 8 markets -> 1, 9 -> 2, ...
+
+  // --- passport stamp bonuses (scoring, separate from quests) ---
+  if (cols.length >= 3 && !next.trioAwarded) next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus };
+  if (cols.length >= MARKETS.length && !next.fullAwarded) next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
+  const units = Math.max(0, cols.length - (STAMP_MILESTONE_AT - 1));
   const paid = next.stampBonusUnits || 0;
-  if (units > paid) {
-    next = { ...next, stampBonusUnits: units, selfPoints: (next.selfPoints || 0) + PTS.stampMilestone * (units - paid) };
+  if (units > paid) next = { ...next, stampBonusUnits: units, selfPoints: (next.selfPoints || 0) + PTS.stampMilestone * (units - paid) };
+
+  // --- quests ---
+  const cons = next.connections || [];
+  const myHob = next.hobbies, myExo = next.exotic, myMkt = next.market, myTen = next.tenure;
+  const myNat = (next.nationality || "").trim().toLowerCase();
+
+  // First Connection — your very first peer
+  if (cons.length >= 1) award("q_first");
+
+  // Hobby Twin — two connections that share a hobby (1 per qualifying connection)
+  const hc = cons.filter((c) => hobbyOverlap(myHob, c.hobbies)).length;
+  if (hc > (next.hobbyTwinCount || 0)) {
+    next = { ...next, hobbyTwinCount: hc };
+    if (hc < HOBBY_TARGET) { const mi = mInfo("q_hobby"); alerts.push({ name: mi.name, icon: mi.icon, grad: mi.grad, done: false, tally: `${hc}/${HOBBY_TARGET}`, sub: "Connect with one more hobby match" }); }
   }
+  if (hc >= HOBBY_TARGET) award("q_hobby", { tally: `${HOBBY_TARGET}/${HOBBY_TARGET}` });
+
+  // Wanderlust Match — shared "most exotic place"
+  if (cons.some((c) => shareToken(myExo, c.exotic))) award("q_wander");
+
+  // Passport Twin — same nationality, different market
+  if (myNat && cons.some((c) => (c.nationality || "").trim().toLowerCase() === myNat && c.market && c.market !== myMkt)) award("q_passport");
+
+  // Veteran and Rookie — up to two distinct brackets different from yours
+  if (myTen) {
+    const diff = [...new Set(cons.map((c) => c.tenure).filter((t) => t && t !== myTen))];
+    const credited = next.vrBrackets || [];
+    const fresh = diff.filter((b) => !credited.includes(b));
+    if (fresh.length && credited.length < VET_TARGET) {
+      const take = fresh.slice(0, VET_TARGET - credited.length);
+      const newCredit = credited.concat(take);
+      const complete = newCredit.length >= VET_TARGET;
+      next = { ...next, vrBrackets: newCredit, selfPoints: (next.selfPoints || 0) + QP.q_vet * take.length };
+      if (complete) next = { ...next, missions: { ...(next.missions || {}), q_vet: true } };
+      const mi = mInfo("q_vet");
+      alerts.push({ name: mi.name, icon: mi.icon, grad: mi.grad, done: complete, tally: `${Math.min(newCredit.length, VET_TARGET)}/${VET_TARGET}`, sub: `+${QP.q_vet * take.length} points` });
+    }
+  }
+
+  // Speed Round — 5 connections inside any rolling 15-minute window
+  const tss = cons.map((c) => c.ts).filter(Boolean).sort((a, b) => a - b);
+  let speed = false;
+  for (let i = 0; i + SPEED_TARGET - 1 < tss.length; i++) { if (tss[i + SPEED_TARGET - 1] - tss[i] <= SPEED_WINDOW_MS) { speed = true; break; } }
+  if (speed) award("q_speed");
+
+  // Social Butterfly — 30 connections
+  if (cons.length >= SOCIAL_TARGET) award("q_social");
+
+  // Around the Region — 5 market stamps
+  if (cols.length >= REGION_TARGET) award("q_region");
+
+  // Home and Away — connect with the market furthest from yours
+  const far = furthestMarket(myMkt);
+  if (far && cons.some((c) => c.market === far)) award("q_homeaway");
+
+  // Market Scholar — ace three different market quizzes
+  if (Object.keys(next.apacAced || {}).length >= SCHOLAR_TARGET) award("q_scholar");
+
+  // Dinner Doer — 3 connections inside the dinner window
+  if (cons.filter((c) => c.ts && c.ts >= DINNER_START && c.ts <= DINNER_END).length >= DINNER_TARGET) award("q_dinner");
+
+  // Unforgettable — someone scored 3/3 on a quiz about you
+  if ((evs || []).some((e) => e.type === "trivia" && e.perfect)) award("q_unforget");
+
+  // Early Bird — points already granted in awardConnection; just flag the quest
+  if (next.earlyBird && !has("q_earlybird")) next = { ...next, missions: { ...(next.missions || {}), q_earlybird: true } };
+
+  // (Perfect Recall and Table Lead are awarded where their data lives — Trivia.finish and refresh.)
+
+  if (alerts.length) next = { ...next, _questAlerts: alerts };
   return next;
 }
 
@@ -964,15 +1151,15 @@ async function applyAutoAwards(rec, evs) {
 //    don't send a duplicate event. Reduces (can't fully eliminate) the exact-simultaneous race.
 //  - Q3: the first EARLY_BIRD_COUNT people globally to make a connection get a one-off bonus.
 // Persists my record (+ the peer's inbox event when needed) and returns { next, earned, earlyBird }.
-async function awardConnection(me, idx, mult) {
+async function awardConnection(me, peer, mult) {
   mult = mult || 1;
   const collected = collectedMarkets(me);
-  const isNewMarket = !collected.includes(idx.market) && idx.market !== me.market;
+  const isNewMarket = !collected.includes(peer.market) && peer.market !== me.market;
 
   let alreadyInbound = false;
   try {
     const myEvs = await sgetAll("inbox:" + me.id + ":");
-    alreadyInbound = myEvs.some((e) => e.type === "connection" && e.fromId === idx.id);
+    alreadyInbound = myEvs.some((e) => e.type === "connection" && e.fromId === peer.id);
   } catch (e) {}
   const base = alreadyInbound ? 0 : PTS.connect;
   const earned = (base + (isNewMarket ? PTS.newMarket : 0)) * mult;
@@ -986,17 +1173,17 @@ async function awardConnection(me, idx, mult) {
     } catch (e) {}
   }
 
+  const conn = { id: peer.id, name: peer.name, market: peer.market, team: peer.team || "", hobbies: peer.hobbies || [], exotic: peer.exotic || "", nationality: peer.nationality || "", tenure: peer.tenure || "", ts: Date.now() };
   const next = {
     ...me,
     selfPoints: (me.selfPoints || 0) + earned + (earlyBird ? PTS.earlyBird : 0),
     earlyBird: me.earlyBird || earlyBird,
-    connections: [...(me.connections || []), { id: idx.id, name: idx.name, market: idx.market, team: idx.team || "" }],
-    missions: { ...me.missions, m_code: true, m_coffee: me.missions.m_coffee || isNewMarket },
+    connections: [...(me.connections || []), conn],
   };
   await sset("users:" + me.id, next);
   if (!alreadyInbound) {
-    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", ts: Date.now() };
-    await sset("inbox:" + idx.id + ":" + ev.id, ev);
+    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", fromHobbies: me.hobbies || [], fromExotic: me.exotic || "", fromNationality: me.nationality || "", fromTenure: me.tenure || "", ts: Date.now() };
+    await sset("inbox:" + peer.id + ":" + ev.id, ev);
   }
   return { next, earned, earlyBird };
 }
@@ -1039,7 +1226,7 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
         <button className="howto-btn" onClick={() => setHowto(true)}>How to play</button>
         <div style={{ textAlign: "center", marginBottom: 8 }}>
           <div className="eyebrow">Asia Pacific Business Forum 2026</div>
-          <h1 className="h1" style={{ color: "#fff", margin: "10px 0 4px" }}>Connection<br />Quest</h1>
+          <h1 className="h1" style={{ color: "#fff", margin: "10px 0 4px" }}>Connection Quest</h1>
           <p style={{ color: "#9fb4bd", fontSize: 14 }}>Meet, learn, and connect across every market.</p>
         </div>
         <div className="card" style={{ marginTop: 18 }}>
@@ -1055,8 +1242,8 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
           </p>
         </div>
         <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 18, justifyContent: "center" }}>
-          <span className="link" onClick={onAdmin} style={{ fontSize: 13, color: "#9fb4bd" }}>Gamesmaster access →</span>
-          <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Leaderboard →</span>
+          <span className="link" onClick={onAdmin} style={{ fontSize: 13, color: "#9fb4bd" }}>Gamesmaster access</span>
+          <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Leaderboard</span>
         </div>
         <div className="credit">Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
       </div>
@@ -1085,7 +1272,7 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
             </div></div>
 
             <div style={{ background: "var(--paper2)", borderRadius: 10, padding: "12px 14px", margin: "4px 0 16px" }}>
-              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--navy)" }}>🎯 The objective</p>
+              <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--navy)" }}>The objective</p>
               <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>Make as many genuine new connections as you can, learn something about every market, and have fun doing it. Top the leaderboard if you can, but the real win is walking out knowing people you didn't know walking in.</p>
             </div>
 
@@ -1270,48 +1457,34 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
   const pct = nx ? Math.min(100, Math.round(((total - rank.min) / (nx.min - rank.min)) * 100)) : 100;
 
   const [editing, setEditing] = useState(false);
-  const [ef, setEf] = useState({ team: "", tenure: "", table: "", h1: "", h2: "", h3: "" });
+  const [ef, setEf] = useState({ name: "", team: "", tenure: "", table: "", h1: "", h2: "", h3: "" });
   function openEdit() {
     const h = me.hobbies || [];
-    setEf({ team: me.team || "", tenure: me.tenure || "", table: me.table || "", h1: h[0] || "", h2: h[1] || "", h3: h[2] || "" });
+    setEf({ name: me.name || "", team: me.team || "", tenure: me.tenure || "", table: me.table || "", h1: h[0] || "", h2: h[1] || "", h3: h[2] || "" });
     setEditing(true);
   }
   const setE = (k) => (e) => setEf((p) => ({ ...p, [k]: e.target.value }));
   async function saveEdit() {
     const hobbies = [ef.h1.trim(), ef.h2.trim(), ef.h3.trim()];
-    const next = { ...me, team: ef.team.trim(), tenure: ef.tenure, table: ef.table, hobbies };
+    const name = ef.name.trim() || me.name;
+    const next = { ...me, name, team: ef.team.trim(), tenure: ef.tenure, table: ef.table, hobbies };
     setMe(next); await sset("users:" + me.id, next);
-    // keep caches in sync: team lives in code:, table lives in score:
+    // keep caches in sync: name + team live in code:, name + table live in score:
     const codeRec = await sget("code:" + me.code);
-    if (codeRec) await sset("code:" + me.code, { ...codeRec, team: next.team });
+    if (codeRec) await sset("code:" + me.code, { ...codeRec, name: next.name, team: next.team });
     const scoreRec = await sget("score:" + me.id);
-    if (scoreRec) await sset("score:" + me.id, { ...scoreRec, table: next.table || "" });
+    if (scoreRec) await sset("score:" + me.id, { ...scoreRec, name: next.name, table: next.table || "" });
     setEditing(false); ping("Profile updated"); refresh(next);
   }
 
   return (
     <div>
-      <div className="eyebrow">My Passport</div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <div style={{ minWidth: 0 }}>
           <h2 className="h1" style={{ color: "#fff", marginBottom: 2 }}>{me.name}</h2>
-          <p style={{ color: "#9fb4bd", fontSize: 13, marginBottom: 12 }}>{me.market}{me.team ? ` · ${me.team}` : ""}</p>
+          <p style={{ color: "#9fb4bd", fontSize: 13, lineHeight: 1.2 }}>{me.market}{me.team ? ` · ${me.team}` : ""}</p>
         </div>
-        <span className="link" style={{ color: "#9fb4bd", fontSize: 13, flexShrink: 0, marginTop: 4 }} onClick={openEdit}>Edit info</span>
-      </div>
-
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div className="eyebrow" style={{ color: "var(--navy)" }}>Total points</div>
-            <div style={{ fontSize: 40, fontWeight: 900, color: "var(--navy)", lineHeight: 1 }}>{total}</div>
-          </div>
-          <span className="pill">{rank.name}</span>
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <div className="progress"><span style={{ width: pct + "%" }} /></div>
-          <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>{nx ? `${nx.min - total} pts to ${nx.name}` : "Top rank reached — Global Citizen!"}</p>
-        </div>
+        <button className="backbtn" style={{ flexShrink: 0, marginBottom: 0 }} onClick={openEdit}>Edit info</button>
       </div>
 
       <div className="card" style={{ marginTop: 12, textAlign: "center" }}>
@@ -1327,7 +1500,7 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
             <div style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)", lineHeight: 1.05 }}>
               {collected.length}<span style={{ fontSize: 16, color: "var(--muted)", fontWeight: 700 }}> / {MARKETS.length}</span>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)" }}>{travelLabel(collected.length)}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--gold)" }}>{travelLabel(collected.length)}</div>
           </div>
           <ProgressRing pct={(collected.length / MARKETS.length) * 100} />
         </div>
@@ -1340,27 +1513,18 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
           {MARKETS.map((m, i) => <Stamp key={m} market={m} idx={i} on={collected.includes(m)} />)}
         </div>
         {collected.length >= MARKETS.length &&
-          <p style={{ color: "var(--green)", fontWeight: 800, fontSize: 13, marginTop: 12, textAlign: "center" }}>★ Full passport — {PTS.fullPassport} bonus pts awarded!</p>}
+          <p style={{ color: "var(--green)", fontWeight: 800, fontSize: 13, marginTop: 12, textAlign: "center" }}>Full passport — {PTS.fullPassport} bonus pts awarded!</p>}
       </div>
-
-      {me.tenure && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-            <div><div className="eyebrow" style={{ color: "var(--navy)" }}>Time with FIL</div><p style={{ fontWeight: 700, fontSize: 15, marginTop: 6 }}>{me.tenure}</p></div>
-          </div>
-        </div>
-      )}
 
       <div className="card" style={{ marginTop: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div>
             <div className="eyebrow" style={{ color: "var(--navy)" }}>New connections sparked</div>
             <div style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)", lineHeight: 1.05 }}>{me.newConnections || 0}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)" }}>People you'd never met before today</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--gold)" }}>People you'd never met before today</div>
           </div>
-          <div style={{ fontSize: 34 }}>🤝</div>
         </div>
-        <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>A quiet side-quest: how many genuinely new people the Quest helped you meet. Every "brand new" connection counts toward the event total too.</p>
+        <p className="muted" style={{ fontSize: 14, marginTop: 10 }}>A quiet side-quest: how many genuinely new people the Quest helped you meet. Every "brand new" connection counts toward the event total too.</p>
       </div>
 
       {editing && (
@@ -1368,6 +1532,9 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <div className="eyebrow" style={{ color: "var(--navy)" }}>Edit my info</div>
             <h2 className="h2" style={{ marginTop: 6, marginBottom: 14 }}>Update your passport</h2>
+            <Field label="Full name">
+              <input className="input" value={ef.name} maxLength={40} onChange={setE("name")} placeholder="Your name" />
+            </Field>
             <Field label="Day 1 table">
               <select className="input" value={ef.table} onChange={setE("table")}>
                 <option value="">Select…</option>
@@ -1420,7 +1587,8 @@ function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
     if ((me.connections || []).some((x) => x.id === idx.id)) { setBusy(false); ping("Already connected with " + idx.name); setCode(""); return; }
 
     const mult = flash && flash.mult > 1 ? flash.mult : 1;
-    const { next, earned, earlyBird } = await awardConnection(me, idx, mult);
+    const full = (await sget("users:" + idx.id)) || idx;
+    const { next, earned, earlyBird } = await awardConnection(me, full, mult);
     setMe(next);
     setBusy(false); setCode("");
     let msg = earned > 0 ? `+${earned} — connected with ${idx.name}!` : `Connected with ${idx.name}!`;
@@ -1440,7 +1608,6 @@ function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
 
   return (
     <div>
-      <div className="eyebrow">Connect</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Meet someone new</h2>
 
       <div className="card">
@@ -1473,7 +1640,7 @@ function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
       <div className="card" style={{ marginTop: 12 }}>
         <div className="eyebrow" style={{ color: "var(--navy)" }}>People you've met ({(me.connections || []).length})</div>
         {(me.connections || []).length === 0
-          ? <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>No connections yet — go say hello.</p>
+          ? <p className="muted" style={{ fontSize: 14, marginTop: 6 }}>No connections yet. Go say hello.</p>
           : <div style={{ marginTop: 8 }}>{(me.connections || []).map((c, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid var(--line)", fontSize: 14 }}>
                 <span style={{ minWidth: 0 }}><span style={{ fontWeight: 600 }}>{c.name}</span>{c.team ? <span className="muted" style={{ fontSize: 12 }}> · {c.team}</span> : ""}</span>
@@ -1494,10 +1661,9 @@ function QuizHub({ me, ping, setMe, refresh, askKnew }) {
   const [kind, setKind] = useState("me");
   return (
     <div>
-      <div className="eyebrow">Quizzes</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Test &amp; be tested</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
-        {[["me", "Peer quiz"], ["japan", "Japan culture"], ["apac", "APAC markets"]].map(([k, l]) => (
+        {[["me", "Peer quiz"], ["japan", "Japanese culture"], ["apac", "APAC markets"]].map(([k, l]) => (
           <button key={k} className={"seg" + (kind === k ? " on" : "")} style={{ fontSize: 12.5, padding: "11px 6px" }} onClick={() => setKind(k)}>{l}</button>
         ))}
       </div>
@@ -1547,7 +1713,7 @@ function Trivia({ me, ping, setMe, refresh, askKnew }) {
     const full = (await sget("users:" + idx.id)) || idx;
     // entering a code here also connects you, exactly like Connect & score
     if (!(me.connections || []).some((x) => x.id === idx.id)) {
-      const { next, earned, earlyBird } = await awardConnection(me, idx, 1);
+      const { next, earned, earlyBird } = await awardConnection(me, full, 1);
       setMe(next);
       let msg = earned > 0 ? `+${earned} — connected with ${idx.name}!` : `Connected with ${idx.name}!`;
       if (earlyBird) msg += ` · +${PTS.earlyBird} early bird!`;
@@ -1583,10 +1749,12 @@ function Trivia({ me, ping, setMe, refresh, askKnew }) {
   async function finish(nc) {
     setStage("done");
     if (nc >= 1) fireConfetti();
-    const youPts = nc * PTS.triviaCorrect;
-    const next = { ...me, selfPoints: (me.selfPoints || 0) + youPts, triviaWith: [...(me.triviaWith || []), peer.id], missions: { ...me.missions, m_trivia: true } };
+    const perfect = nc >= 3 && !(me.missions && me.missions.q_recall);
+    const youPts = nc * PTS.triviaCorrect + (perfect ? QP.q_recall : 0);
+    const next = { ...me, selfPoints: (me.selfPoints || 0) + youPts, triviaWith: [...(me.triviaWith || []), peer.id], missions: { ...(me.missions || {}), ...(perfect ? { q_recall: true } : {}) } };
     setMe(next); await sset("users:" + me.id, next);
-    const ev = { id: eid(), type: "trivia", points: PTS.triviaSubject, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
+    if (perfect) ping(`Perfect Recall! 3/3 · +${QP.q_recall}`);
+    const ev = { id: eid(), type: "trivia", points: PTS.triviaSubject, fromId: me.id, fromName: me.name, fromMarket: me.market, perfect: nc >= 3, ts: Date.now() };
     await sset("inbox:" + peer.id + ":" + ev.id, ev);
     refresh(next);
   }
@@ -1632,7 +1800,6 @@ function Trivia({ me, ping, setMe, refresh, askKnew }) {
       <div className="eyebrow">Peer Pop Quiz</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>Time!</h2>
       <div className="card" style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 48 }}>{correct === 3 ? "🏆" : correct >= 1 ? "✨" : "🤝"}</div>
         <p style={{ fontWeight: 800, fontSize: 20, margin: "8px 0" }}>You scored {correct}/3 on {peer && peer.name}</p>
         <p className="muted" style={{ fontSize: 14 }}>You earned +{correct * PTS.triviaCorrect}. {peer && peer.name} earned +{PTS.triviaSubject} for the connection.</p>
         <button className="btn btn-primary" style={{ marginTop: 14 }} onClick={() => { setStage("intro"); setCode(""); setPeer(null); }}>Quiz someone else</button>
@@ -1666,7 +1833,6 @@ function Learn({ me, ping, setMe, refresh }) {
   const [sub, setSub] = useState("ice");
   return (
     <div>
-      <div className="eyebrow">Learn</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 12 }}>While you're here</h2>
       <div className="grid2" style={{ marginBottom: 14 }}>
         {[["ice", "Icebreakers"], ["hands", "Show of hands"], ["japan", "Japanese etiquette"], ["phrases", "Japanese phrases"]].map(([k, l]) => (
@@ -1696,8 +1862,8 @@ function Icebreakers({ me, ping, setMe, refresh }) {
       <div className="eyebrow" style={{ color: "var(--navy)" }}>Conversation starters</div>
       <div style={{ margin: "10px 0 4px" }}>
         {trio.map((idx, k) => (
-          <div key={idx} style={{ display: "flex", gap: 10, padding: "12px 0", borderBottom: k < 2 ? "1px solid var(--line)" : "none" }}>
-            <span style={{ color: "var(--navy)", fontWeight: 800, fontSize: 14, flexShrink: 0, marginTop: 2 }}>{k + 1}</span>
+          <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", borderBottom: k < 2 ? "1px solid var(--line)" : "none" }}>
+            <span style={{ color: "var(--navy)", fontWeight: 800, fontSize: 16, lineHeight: 1.4, flexShrink: 0 }}>{k + 1}</span>
             <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4 }}>{ICEBREAKERS[idx]}</p>
           </div>
         ))}
@@ -1762,7 +1928,7 @@ function JapanesePhrases() {
             <span style={{ fontSize: 15, color: "var(--navy)", flexShrink: 0 }}>{p.jp}</span>
           </div>
           <p style={{ fontSize: 14, marginTop: 3, fontWeight: 600 }}>{p.en}</p>
-          <p className="muted" style={{ fontSize: 13, marginTop: 3 }}>{p.note}</p>
+          <p className="muted" style={{ fontSize: 14, marginTop: 3 }}>{p.note}</p>
         </div>
       ))}
     </div>
@@ -1821,7 +1987,7 @@ function CultureChallenges({ me, ping, setMe, refresh }) {
     const idx = await sget("code:" + c);
     if (!idx) { setBusy(false); ping("Code not found"); return; }
     if (done[ch.id]) { setBusy(false); ping("Already done"); return; }
-    const next = { ...me, culture: { ...done, [ch.id]: true }, selfPoints: (me.selfPoints || 0) + ch.pts, missions: { ...me.missions, m_learn: true } };
+    const next = { ...me, culture: { ...done, [ch.id]: true }, selfPoints: (me.selfPoints || 0) + ch.pts };
     setMe(next); await sset("users:" + me.id, next);
     const ev = { id: eid(), type: "culture", points: 10, fromId: me.id, fromName: me.name, fromMarket: me.market, ts: Date.now() };
     await sset("inbox:" + idx.id + ":" + ev.id, ev);
@@ -1842,12 +2008,15 @@ function CultureChallenges({ me, ping, setMe, refresh }) {
         const isActive = active === ch.id;
         return (
           <div className="card" key={ch.id} style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-              <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontWeight: 800 }}>{ch.t} <span className="muted" style={{ fontWeight: 700, fontSize: 12 }}>· +{ch.pts}</span></p>
                 <p className="muted" style={{ fontSize: 13, marginTop: 3 }}>{ch.d}</p>
+                {isDone && <span className="pill" style={{ background: "#e6f1fb", color: "var(--green)", marginTop: 8, display: "inline-block" }}>Done ✓</span>}
               </div>
-              {isDone && <span className="pill" style={{ background: "#e6f1fb", color: "var(--green)", flexShrink: 0 }}>Done ✓</span>}
+              <div style={{ flex: "none", width: 56, height: 56, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(155deg, ${ch.grad[0]}, ${ch.grad[1]})`, boxShadow: "0 4px 11px rgba(20,40,70,.20)" }}>
+                <QIcon name={ch.icon} stroke="#fff" size={26} />
+              </div>
             </div>
             {!isDone && !isActive && (
               <button className="btn btn-primary" style={{ marginTop: 10, padding: "9px 14px" }} onClick={() => { setActive(ch.id); setCode(""); }}>Confirm with a peer</button>
@@ -1876,10 +2045,11 @@ function ApacQuiz({ me, ping, setMe, refresh }) {
   async function finish(market, correct) {
     setActive(null);
     if (done[market]) { ping("Already completed " + market); return; }
+    const total = APAC_QUIZ[market].length;
     const pts = correct * 5;
-    const nextDone = { ...done, [market]: true };
-    const next = { ...me, apacDone: nextDone, apacQuiz: true, selfPoints: (me.selfPoints || 0) + pts, missions: { ...me.missions, m_apac: true } };
-    setMe(next); await sset("users:" + me.id, next); ping(`+${pts} — ${correct}/${APAC_QUIZ[market].length} on ${market}`); refresh(next);
+    const aced = correct === total;
+    const next = { ...me, apacDone: { ...done, [market]: true }, apacAced: { ...(me.apacAced || {}), ...(aced ? { [market]: true } : {}) }, apacQuiz: true, selfPoints: (me.selfPoints || 0) + pts };
+    setMe(next); await sset("users:" + me.id, next); ping(`+${pts} — ${correct}/${total} on ${market}${aced ? " · aced!" : ""}`); refresh(next);
   }
 
   if (active) {
@@ -1899,13 +2069,17 @@ function ApacQuiz({ me, ping, setMe, refresh }) {
         <div className="eyebrow" style={{ color: "var(--navy)" }}>Pick a market</div>
         <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>{doneCount}/{markets.length} done</span>
       </div>
-      <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Test your APAC markets knowledge. Anyone can play and score, no connection needed.</p>
+      <p className="muted" style={{ fontSize: 12, margin: "4px 0 12px" }}>Connect with someone from a market to unlock its quiz, then play it for points.</p>
       <div style={{ display: "grid", gap: 8 }}>
         {markets.map((m) => {
+          const unlocked = collected.includes(m);
           return (
-            <button key={m} className="opt" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0 }} onClick={() => setActive(m)}>
+            <button key={m} className="opt" disabled={!unlocked}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 0, opacity: unlocked ? 1 : 0.55, cursor: unlocked ? "pointer" : "not-allowed" }}
+              onClick={() => { if (unlocked) setActive(m); }}>
               <span>{m}</span>
-              {done[m] ? <span style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>✓ Done</span>
+              {!unlocked ? <span className="muted" style={{ fontWeight: 700, fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" fill="currentColor" /><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>Connect to unlock</span>
+                : done[m] ? <span style={{ color: "var(--green)", fontWeight: 800, fontSize: 13 }}>✓ Done</span>
                 : <span style={{ color: "var(--green)", fontWeight: 700, fontSize: 12 }}>Play for points →</span>}
             </button>
           );
@@ -1918,16 +2092,51 @@ function ApacQuiz({ me, ping, setMe, refresh }) {
 /* ============================================================================
    MISSIONS
 ============================================================================ */
+function questProgress(me, id) {
+  if (id === "q_hobby" && !(me.missions && me.missions.q_hobby)) { const n = Math.min(me.hobbyTwinCount || 0, HOBBY_TARGET); return n > 0 ? `${n}/${HOBBY_TARGET}` : ""; }
+  if (id === "q_vet" && !(me.missions && me.missions.q_vet)) { const n = Math.min((me.vrBrackets || []).length, VET_TARGET); return n > 0 ? `${n}/${VET_TARGET}` : ""; }
+  return "";
+}
+function questPct(me, id) {
+  if (id === "q_hobby") return Math.min(me.hobbyTwinCount || 0, HOBBY_TARGET) / HOBBY_TARGET * 100;
+  if (id === "q_vet") return Math.min((me.vrBrackets || []).length, VET_TARGET) / VET_TARGET * 100;
+  return 0;
+}
+// Flat line-art glyphs for the quest badges (stroke inherits from the wrapping <g>)
+function QIcon({ name, stroke, size }) {
+  const s = size || 26;
+  const P = {
+    connect: <><circle cx="7.5" cy="12" r="3.2" /><circle cx="16.5" cy="12" r="3.2" /><line x1="10.7" y1="12" x2="13.3" y2="12" /></>,
+    twin: <><circle cx="9.5" cy="12" r="5" /><circle cx="14.5" cy="12" r="5" /></>,
+    hourglass: <><path d="M7 4h10M7 20h10" /><path d="M8 4c0 4 8 4 8 8s-8 4-8 8" /><path d="M16 4c0 4-8 4-8 8s8 4 8 8" /></>,
+    compass: <><circle cx="12" cy="12" r="8.5" /><path d="M12 6.5l2.6 5.5L12 14l-2.6-2z" /></>,
+    passport: <><rect x="5.5" y="3" width="13" height="18" rx="2" /><circle cx="12" cy="10" r="2.6" /><path d="M9.3 15.5h5.4" /></>,
+    stopwatch: <><circle cx="12" cy="13.5" r="6.8" /><path d="M12 13.5V9.5" /><path d="M10 3h4" /><path d="M12 3v3" /></>,
+    people: <><circle cx="9" cy="9.5" r="3" /><path d="M3.8 19c0-3 2.4-4.8 5.2-4.8S14.2 16 14.2 19" /><circle cx="17" cy="8.5" r="2.3" /><path d="M15.6 13.6c2.2.1 4 1.7 4 4.4" /></>,
+    map: <><path d="M9 4.5L3.5 6.3v13.2L9 17.7l6 1.8 5.5-1.8V4.5L15 6.3 9 4.5z" /><path d="M9 4.5v13.2M15 6.3v13.2" /></>,
+    plane: <><path d="M21 3.5L3.5 11l6.2 2.3L12 20l3-9 6-7.5z" /><path d="M9.7 13.3L15 6.5" /></>,
+    cap: <><path d="M2.5 9.2L12 5l9.5 4.2L12 13.4 2.5 9.2z" /><path d="M6.2 11.2v4.2c0 1.5 2.6 2.8 5.8 2.8s5.8-1.3 5.8-2.8v-4.2" /></>,
+    crown: <><path d="M3.5 8l3.2 8.5h10.6L20.5 8l-4.8 3.6L12 5.2 8.3 11.6z" /></>,
+    target: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="1" fill={stroke} stroke="none" /></>,
+    star: <><path d="M12 3.4l2.5 5.6 6.1.6-4.6 4 1.4 6L12 16.9 6.6 19.6 8 13.6 3.4 9.6l6.1-.6z" /></>,
+    sunrise: <><path d="M3.5 18.5h17" /><path d="M7 18.5a5 5 0 0 1 10 0" /><path d="M12 5.5V8M6 9.5l1.6 1.6M18 9.5l-1.6 1.6" /></>,
+    dining: <><path d="M7.5 3.2v8M5.7 3.2v3.6a1.8 1.8 0 0 0 3.6 0V3.2M7.5 11.2V21" /><path d="M16.5 3.2c-1.8 0-2.2 5.4 0 6.6V21" /></>,
+    bow: <><path d="M4 19.5h16" /><circle cx="8.5" cy="6.5" r="2.5" /><path d="M8.5 9c0 2.4-.4 3.9-2.2 5.4L4.5 16" /><path d="M8.5 9c1.6 1.6 4.4 2.6 7.5 2.6" /></>,
+    card: <><rect x="2.8" y="6.5" width="13" height="8.5" rx="1.5" /><rect x="8.2" y="9" width="13" height="8.5" rx="1.5" /></>,
+    speech: <><path d="M4.5 5h15a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2H10l-4 3.3v-3.3H4.5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /><path d="M7 9.3h10M7 12h6" /></>,
+    drink: <><path d="M6.5 4h11l-2.2 6.4a3.3 3.3 0 0 1-6.6 0z" /><path d="M12 13.5V19M8.5 20h7" /></>,
+    bowl: <><path d="M3.5 11.2h17c0 4.3-3.8 7.3-8.5 7.3s-8.5-3-8.5-7.3z" /><path d="M2.6 11.2h18.8" /><path d="M9.5 3.6l3 6M13.5 3.2l-1.4 6.4" /></>,
+  };
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{P[name] || P.star}</g>
+    </svg>
+  );
+}
 function Missions({ me, total, ping, setMe, refresh }) {
   const doneCount = MISSIONS.filter((m) => me.missions && me.missions[m.id]).length;
   const [bonusCode, setBonusCode] = useState("");
   const [bonusBusy, setBonusBusy] = useState(false);
-  async function toggle(m) {
-    if (me.missions && me.missions[m.id]) return; // one-way; awarded once
-    if (m.auto) { ping("This one completes automatically when you do it in the app."); return; }
-    const next = { ...me, selfPoints: (me.selfPoints || 0) + m.pts, missions: { ...me.missions, [m.id]: true } };
-    setMe(next); await sset("users:" + me.id, next); ping(`+${m.pts} — ${m.label}`); refresh(next);
-  }
   async function redeem() {
     const c = bonusCode.trim().toUpperCase().replace(/\s+/g, "");
     if (!c) { ping("Enter the code"); return; }
@@ -1949,25 +2158,43 @@ function Missions({ me, total, ping, setMe, refresh }) {
   }
   return (
     <div>
-      <div className="eyebrow">Quests</div>
       <h2 className="h1" style={{ color: "#fff", marginBottom: 4 }}>Your challenges</h2>
-      <p style={{ color: "#9fb4bd", fontSize: 13, marginBottom: 12 }}>{doneCount}/{MISSIONS.length} complete</p>
-      <div className="card">
-        <div className="progress" style={{ marginBottom: 14 }}><span style={{ width: Math.round((doneCount / MISSIONS.length) * 100) + "%" }} /></div>
+      <p style={{ color: "#9fb4bd", fontSize: 13, marginBottom: 10 }}>{doneCount}/{MISSIONS.length} complete</p>
+      <div style={{ height: 8, background: "rgba(255,255,255,.12)", borderRadius: 999, overflow: "hidden", marginBottom: 16 }}>
+        <span style={{ display: "block", height: "100%", width: Math.round((doneCount / MISSIONS.length) * 100) + "%", background: "linear-gradient(90deg,var(--green),#46a6df)", borderRadius: 999, transition: "width .7s cubic-bezier(.2,.8,.2,1)" }} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
         {MISSIONS.map((m) => {
           const on = me.missions && me.missions[m.id];
+          const prog = questProgress(me, m.id);
           return (
-            <div key={m.id} onClick={() => toggle(m)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0", borderBottom: "1px solid var(--line)", cursor: on ? "default" : "pointer" }}>
-              <div style={{ width: 24, height: 24, borderRadius: 7, border: "2px solid " + (on ? "var(--green)" : "var(--line)"), background: on ? "var(--green)" : "#fff", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, transition: "all .25s", flexShrink: 0 }}>{on ? "✓" : ""}</div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, textDecoration: on ? "line-through" : "none", opacity: on ? .6 : 1 }}>{m.label}</p>
+            <div key={m.id} className="card" style={{ position: "relative", borderRadius: 16, padding: "14px 7px 13px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <span style={{ position: "absolute", top: 8, left: 8, fontSize: 10.5, fontWeight: 800, color: "var(--navy)", background: "var(--paper2)", borderRadius: 999, padding: "2px 8px", lineHeight: 1.3 }}>+{m.pts}</span>
+              <div style={{ position: "relative", marginBottom: 9 }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  ...(on
+                    ? { background: `linear-gradient(155deg, ${m.grad[0]}, ${m.grad[1]})`, boxShadow: "0 4px 11px rgba(20,40,70,.20)" }
+                    : { background: "#eef1f7", border: "2px dashed #cfd6e2" }) }}>
+                  <QIcon name={m.icon} stroke={on ? "#fff" : "#b6bfce"} size={26} />
+                </div>
+                {on && (
+                  <div style={{ position: "absolute", right: -3, bottom: -3, width: 21, height: 21, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.20)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4 4 10-10" stroke={m.grad[1]} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </div>
+                )}
               </div>
-              <span className="pill">+{m.pts}</span>
+              <p style={{ fontSize: 12, fontWeight: 800, lineHeight: 1.15, margin: "0 0 3px", color: on ? "var(--navy)" : "#8a96a3" }}>{m.name}</p>
+              <p style={{ fontSize: 10.5, lineHeight: 1.25, margin: 0, color: "var(--muted)" }}>{m.desc}</p>
+              {prog && (
+                <div style={{ width: "80%", height: 5, background: "var(--paper2)", borderRadius: 999, overflow: "hidden", marginTop: 8 }}>
+                  <span style={{ display: "block", height: "100%", width: questPct(me, m.id) + "%", background: "linear-gradient(90deg,var(--green),#46a6df)", borderRadius: 999 }} />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-      <p className="muted" style={{ fontSize: 12, marginTop: 10, color: "#9fb4bd" }}>Tip: quests marked auto complete themselves when you act in the app (connecting, quizzing, learning).</p>
+      <p className="muted" style={{ fontSize: 13, marginTop: 12, color: "#9fb4bd" }}>Quests complete automatically as you play — connect, quiz and explore to earn them.</p>
 
       <div className="card" style={{ marginTop: 14 }}>
         <div className="eyebrow" style={{ color: "var(--navy)" }}>Offline points</div>
@@ -2137,7 +2364,7 @@ function RoomNetwork({ players, pairs }) {
         <div style={{ position: "absolute", left: 16, right: 16, bottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, color: "#cfe0e6", marginBottom: 7 }}>
             <span>Light up the room</span>
-            <span style={{ color: hud.full ? "#ffd98a" : "#9fb4bd", fontWeight: hud.full ? 700 : 400 }}>{hud.full ? "Room lit ✨" : `${hud.lit} of ${hud.total} guests in play`}</span>
+            <span style={{ color: hud.full ? "#ffd98a" : "#9fb4bd", fontWeight: hud.full ? 700 : 400 }}>{hud.full ? "Room lit" : `${hud.lit} of ${hud.total} guests in play`}</span>
           </div>
           <div style={{ height: 10, background: "rgba(255,255,255,.09)", borderRadius: 6, overflow: "hidden" }}>
             <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg,#2f8fd0,#37c08a)", borderRadius: 6, transition: "width .6s ease" }} />
@@ -2496,7 +2723,7 @@ function AdminPanel({ onExit, onScreen }) {
         <h2 className="h1" style={{ color: "#fff", fontSize: 22 }}>Gamesmaster</h2>
         <div style={{ display: "flex", gap: 16 }}>
           <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>← Home</span>
-          {onScreen && <span className="link" style={{ color: "var(--gold)", fontSize: 13 }} onClick={onScreen}>Leaderboard →</span>}
+          {onScreen && <span className="link" style={{ color: "var(--gold)", fontSize: 13 }} onClick={onScreen}>Leaderboard</span>}
           <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>Exit</span>
         </div>
       </div>
