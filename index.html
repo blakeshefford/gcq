@@ -893,7 +893,7 @@ function App() {
     let qAlerts = next._questAlerts || [];
     if (next._questAlerts) { next = { ...next }; delete next._questAlerts; }
     // Table Lead — top of your table at 15:00 JST, frozen once and shared per table
-    if (Date.now() >= TABLE_LEAD_AT && !next.tableLeadDone && next.table) {
+    if (Date.now() >= TABLE_LEAD_AT && !next.tableLeadDone && next.table && next.table !== "N/A") {
       try {
         let lead = await sget("tablelead:" + next.table);
         if (!lead) {
@@ -1252,28 +1252,28 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
           <div className="sheet" style={{ borderRadius: 18, maxWidth: 420, margin: "0 16px", maxHeight: "86vh" }} onClick={(e) => e.stopPropagation()}>
             <div className="eyebrow" style={{ color: "var(--gold)" }}>The 60-second briefing</div>
             <h2 className="h1" style={{ fontSize: 24, color: "var(--navy)", margin: "6px 0 4px" }}>How to play</h2>
-            <p className="muted" style={{ fontSize: 14, margin: "0 0 16px" }}>It's a treasure hunt, but the treasure is people. Roam the room, meet colleagues from every market, and stamp your passport as you go.</p>
+            <p className="muted" style={{ fontSize: 14, margin: "0 0 16px" }}>The Asia Pacific Business Forum is about building connections across our markets. This is a treasure hunt where the treasure is people — meet colleagues from every market and stamp your passport as you go.</p>
 
             <div className="howto-step"><div className="howto-num">1</div><div>
               <h4>Get your Connect Code</h4>
-              <p>Register once and you'll get a 3-digit code. It's your identity for the whole event, on any device.</p>
+              <p>Register once for a 3-digit code. It's your identity for the whole event, on any device.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">2</div><div>
               <h4>Meet people, swap codes</h4>
-              <p>Find someone new, trade codes, and punch theirs into Connect. You both score. A market you've never met before is worth bonus points and a fresh passport stamp.</p>
+              <p>Find someone new, trade codes and enter theirs into Connect. You both score, and a market you've not met before earns bonus points and a passport stamp.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">3</div><div>
-              <h4>Quiz, learn, and complete quests</h4>
-              <p>Run a 60-second pop quiz to prove you actually talked. Pick up Japan culture and APAC market know-how. Tick off quests for extra points.</p>
+              <h4>Quiz, learn, complete quests</h4>
+              <p>Run a 60-second pop quiz to prove you really talked, pick up Japanese culture and market know-how, and watch quests complete automatically as you go.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">4</div><div>
               <h4>Collect the full passport</h4>
-              <p>Stamps from three markets earns a bonus. Every market in the room earns a big one. Watch the live leaderboard light up as you climb.</p>
+              <p>Three market stamps earns a bonus; every market in the room earns a big one. Climb the live leaderboard as you go.</p>
             </div></div>
 
             <div style={{ background: "var(--paper2)", borderRadius: 10, padding: "12px 14px", margin: "4px 0 16px" }}>
               <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "var(--navy)" }}>The objective</p>
-              <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>Make as many genuine new connections as you can, learn something about every market, and have fun doing it. Top the leaderboard if you can, but the real win is walking out knowing people you didn't know walking in.</p>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>Build as many genuine new connections as you can, learn something about every market, and enjoy it. The real win is leaving knowing people you didn't when you arrived.</p>
             </div>
 
             <button className="btn btn-primary" onClick={() => setHowto(false)}>Let's go</button>
@@ -1361,6 +1361,7 @@ function Register({ onDone, onBack }) {
             <select className="input" value={f.table} onChange={set("table")}>
               <option value="">Select…</option>
               {Array.from({ length: 12 }, (_, i) => String.fromCharCode(65 + i)).map((n) => <option key={n} value={n}>{n}</option>)}
+              <option value="N/A">N/A</option>
             </select>
           </Field>
           {err && <p style={{ color: "var(--seal)", fontSize: 13, fontWeight: 600 }}>{err}</p>}
@@ -1539,6 +1540,7 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
               <select className="input" value={ef.table} onChange={setE("table")}>
                 <option value="">Select…</option>
                 {Array.from({ length: 12 }, (_, i) => String.fromCharCode(65 + i)).map((n) => <option key={n} value={n}>{n}</option>)}
+                <option value="N/A">N/A</option>
               </select>
             </Field>
             <Field label="Team / function">
@@ -1570,7 +1572,7 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
 }
 
 /* ============================================================================
-   CONNECT — enter a peer's code (4-digit). Both sides score, once per person.
+   CONNECT — enter a peer's code (3-digit). Both sides score, once per person.
 ============================================================================ */
 function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
   const [code, setCode] = useState("");
@@ -1981,7 +1983,7 @@ function CultureChallenges({ me, ping, setMe, refresh }) {
 
   async function verify(ch) {
     const c = code.trim();
-    if (!/^\d{4}$/.test(c)) { ping("Enter their 4-digit code"); return; }
+    if (!/^\d{3}$/.test(c)) { ping("Enter their 3-digit code"); return; }
     if (c === me.code) { ping("That's your own code!"); return; }
     setBusy(true);
     const idx = await sget("code:" + c);
