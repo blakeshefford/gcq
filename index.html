@@ -2194,9 +2194,21 @@ function BigScreenLive({ onExit, onAdmin }) {
       const points = recent.reduce((s, e) => s + (e.points || 0), 0);
       const active = new Set(recent.map((e) => e.toName).filter(Boolean)).size;
 
+      // New joiners as ticker items — good filler at the start when connections are
+      // sparse. Capped to the 15 most recent so a registration rush can't bury real
+      // activity, and time-sorted with everything else so connections/quizzes take
+      // over as they ramp up. Joins are deliberately not counted in the stats above.
+      const usersKV = await sgetAllKV("users:");
+      const joins = usersKV
+        .map(({ value }) => ({ ts: (value && value.createdAt) || 0, type: "join", points: 0, fromName: (value && value.name) || "", fromMarket: (value && value.market) || "", toName: "", toMarket: "" }))
+        .filter((e) => e.fromName && e.ts)
+        .sort((a, b) => b.ts - a.ts)
+        .slice(0, 15);
+      const merged = [...events, ...joins].sort((a, b) => b.ts - a.ts);
+
       if (!alive) return;
       setRows(sorted.slice(0, 10)); setCount(players.length);
-      setMarkets(ms); setTables(ts8); setFeed(events.slice(0, 250));
+      setMarkets(ms); setTables(ts8); setFeed(merged.slice(0, 250));
       setStats({ connections, quizzes, points, active });
       setNewConnTotal(players.reduce((s, p) => s + ((p && p.newConnections) || 0), 0));
       setNetPlayers(players); setNetPairs(pairs);
@@ -2218,9 +2230,10 @@ function BigScreenLive({ onExit, onAdmin }) {
   const dur = Math.max(40, tickerItems.length * 5);
 
   function lineFor(e, i) {
-    const dotColor = e.type === "connection" ? "var(--green)" : e.type === "trivia" ? "#5fb0d8" : e.type === "boost" ? "var(--gold)" : e.type === "welcome" ? "#9fb4bd" : "#37c08a";
+    const dotColor = e.type === "connection" ? "var(--green)" : e.type === "trivia" ? "#5fb0d8" : e.type === "boost" ? "var(--gold)" : e.type === "join" ? "#7ad1b0" : e.type === "welcome" ? "#9fb4bd" : "#37c08a";
     let body;
     if (e.type === "connection") body = (<><span className="lt-person"><span className="lt-who">{e.fromName}</span>{e.fromMarket && <span className="lt-mk">{e.fromMarket}</span>}</span><span className="lt-met">met</span><span className="lt-person"><span className="lt-who">{e.toName || "someone new"}</span>{e.toName && e.toMarket && <span className="lt-mk">{e.toMarket}</span>}</span></>);
+    else if (e.type === "join") body = (<><span className="lt-person"><span className="lt-who">{e.fromName}</span>{e.fromMarket && <span className="lt-mk">{e.fromMarket}</span>}</span><span className="lt-met">joined the Quest</span></>);
     else if (e.type === "trivia") body = (<><span className="lt-who">{e.toName || "Someone"}</span><span className="lt-met">scored in {e.fromName}'s quiz</span></>);
     else if (e.type === "boost") body = (<><span className="lt-who">{e.fromName || "Gamesmaster"}</span><span className="lt-met">awarded</span><span className="lt-who">{e.toName || "a player"}</span></>);
     else if (e.type === "welcome") body = (<span style={{ color: "#cfe0e6" }}>{e.fromName}</span>);
