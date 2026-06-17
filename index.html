@@ -506,7 +506,7 @@ function Styles() {
 
 /* ---- Travel-themed nav icons --------------------------------------------- */
 // Explore — embedded neighbourhood guide (Google My Map) plus a grouped, tappable list.
-const EXPLORE_MID = "1yipX0j03KYi3g0-5FpPpEWbtsFuAZnU";
+const EXPLORE_MID = "15Bpbp5PRavq8cpysBHy0Eo2fBe0XUfI";
 const EXPLORE_CATS = ["Tuck In", "Coffee catch-up", "After-hours"];
 const EXPLORE_PLACES = [
   { name: "Lilyan", cat: "Tuck In", note: "Soba (buckwheat noodle). Lunch and dinner.", q: "Lilyan, Roppongi, Minato City, Tokyo" },
@@ -2646,6 +2646,28 @@ function AdminPanel({ onExit, onScreen }) {
 }
 
 function SetupNotice(){return (<div className="gcq"><div className="wrap" style={{justifyContent:"center"}}><Styles /><div className="card"><div className="eyebrow" style={{color:"var(--navy)"}}>Setup needed</div><h2 className="h2" style={{marginTop:6}}>Add your Supabase keys</h2></div></div></div>);}
+// Top-level error boundary: a render error shows a friendly reload screen instead of
+// a blank page, and the big screen can recover. Inert unless something actually throws.
+class ErrorBoundary extends React.Component {
+  constructor(p) { super(p); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err, info) { try { console.error("Connection Quest crashed:", err, info); } catch (e) {} }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="gcq"><div className="wrap" style={{ justifyContent: "center", alignItems: "center", textAlign: "center", padding: 24 }}>
+        <Styles />
+        <div>
+          <div className="eyebrow" style={{ color: "#4ea3d6" }}>Connection Quest</div>
+          <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: "8px 0 6px" }}>Something hiccuped</h2>
+          <p style={{ color: "#c7d4dd", fontSize: 14, lineHeight: 1.5, maxWidth: 320, margin: "0 auto 18px" }}>The app hit an unexpected snag. Reloading usually sorts it, your points and connections are safe.</p>
+          <button onClick={() => window.location.reload()} style={{ background: "var(--gold)", color: "#002233", border: 0, borderRadius: 999, padding: "11px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>Reload</button>
+        </div>
+      </div></div>
+    );
+  }
+}
+
 const _root = ReactDOM.createRoot(document.getElementById("root"));
-_root.render(CONFIGURED ? <App /> : <SetupNotice />);
+_root.render(<ErrorBoundary>{CONFIGURED ? <App /> : <SetupNotice />}</ErrorBoundary>);
 </script></body></html>
