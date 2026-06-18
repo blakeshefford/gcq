@@ -801,6 +801,7 @@ function App() {
 
   useEffect(() => {
     if (view !== "app") return;
+    if (typeof document !== "undefined" && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     navStack.current = [];
     setBackable(false);
     try { window.history.pushState({ gcqRoot: true }, ""); } catch {}
@@ -1244,6 +1245,7 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
     const e = email.trim().toLowerCase();
     if (!e || !e.includes("@")) { setErr("Enter the email you registered with."); return; }
     setBusy(true); setErr("");
+    if (typeof document !== "undefined" && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const idx = await sget("email:" + e);
     if (idx && idx.id) {
       const rec = await sget("users:" + idx.id);
@@ -1331,6 +1333,7 @@ function Register({ onDone, onBack, initialEmail }) {
   async function submit() {
     if (!ready) { setErr("Please complete all required fields to unlock your code."); return; }
     setBusy(true); setErr("");
+    if (typeof document !== "undefined" && document.activeElement && document.activeElement.blur) document.activeElement.blur();
     const emailKey = "email:" + f.email.trim().toLowerCase();
     const existing = await sget(emailKey);
     if (existing && existing.id) {
