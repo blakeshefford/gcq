@@ -422,7 +422,7 @@ function Styles() {
     .wrap{max-width:480px;margin:0 auto;padding:0 16px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
     .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--gold)}
     .instr{background:var(--paper2);border-radius:10px;padding:11px 13px;font-size:14px;font-weight:700;color:var(--navy);line-height:1.4}
-    .h1{font-size:26px;font-weight:900;letter-spacing:-.01em;line-height:1.1}
+    .h1{font-size:26px;font-weight:900;letter-spacing:-.01em;line-height:1.1;margin-top:0}
     .h2{font-size:18px;font-weight:800;letter-spacing:-.01em}
     .muted{color:var(--muted)}
     .card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;
@@ -825,15 +825,18 @@ function App() {
   const goBack = useCallback(() => { try { window.history.back(); } catch {} }, []);
 
   // Always land at the top so the points header is pinned at the top of the screen
-  // on sign-in and on every tab change (then it stays put via position:sticky).
+  // on sign-in and on every tab change. Extra passes catch async content load and
+  // the pageshow handler covers returning to the page from the back/forward cache.
   useEffect(() => {
     if (view !== "app") return;
     try { if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual"; } catch {}
-    const jump = () => { try { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; } catch {} };
+    const jump = () => { try { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; } catch {} try { window.scrollTo(0, 0); } catch {} };
     jump();
     const r = requestAnimationFrame(jump);
-    const t = setTimeout(jump, 60);
-    return () => { cancelAnimationFrame(r); clearTimeout(t); };
+    const timers = [setTimeout(jump, 60), setTimeout(jump, 200)];
+    const onShow = () => jump();
+    window.addEventListener("pageshow", onShow);
+    return () => { cancelAnimationFrame(r); timers.forEach(clearTimeout); window.removeEventListener("pageshow", onShow); };
   }, [view, tab]);
 
   // ask "did you already know them?" after a new connection (Connect + Quiz)
