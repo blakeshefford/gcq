@@ -471,7 +471,7 @@ function Styles() {
     .tab.on{color:#fff}
     .tab .dot{width:5px;height:5px;border-radius:50%;background:var(--green);opacity:0}
     .tab.on .dot{opacity:1}
-    .nav{position:sticky;bottom:0;display:flex;background:var(--navy2);z-index:45;
+    .nav{display:flex;background:var(--navy2);z-index:45;
       padding-bottom:env(safe-area-inset-bottom,0px);
       border-top:1px solid rgba(255,255,255,.08);border-radius:14px 14px 0 0}
     .flash{background:var(--seal);color:#fff;border-radius:12px;padding:12px 14px;font-weight:700;
@@ -781,6 +781,7 @@ function App() {
   const [knewAsk, setKnewAsk] = useState(null); // {name} -> "did you already know them?"
   const navStack = useRef([]);
   const tabRef = useRef("passport");
+  const scrollerRef = useRef(null); // app content scroll container (internal scroll)
   const meRef = useRef(null);
   const profileSeenRef = useRef(false); // true once this session's profile is confirmed in the DB
   const seenInbox = useRef(null); // Set of event keys already seen (null = not yet seeded)
@@ -797,7 +798,7 @@ function App() {
     setBackable(true);
     try { window.history.pushState({ gcqNav: true }, ""); } catch {}
     setTab(next);
-    try { requestAnimationFrame(() => window.scrollTo(0, 0)); } catch { try { window.scrollTo(0, 0); } catch {} }
+    try { requestAnimationFrame(() => { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; }); } catch { try { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; } catch {} }
   }, []);
 
   useEffect(() => {
@@ -811,7 +812,7 @@ function App() {
         const prev = navStack.current.pop();
         setBackable(navStack.current.length > 0);
         setTab(prev);
-        try { requestAnimationFrame(() => window.scrollTo(0, 0)); } catch { try { window.scrollTo(0, 0); } catch {} }
+        try { requestAnimationFrame(() => { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; }); } catch { try { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; } catch {} }
         try { window.history.pushState({ gcqNav: true }, ""); } catch {}
       } else {
         // at the opening tab: a further back leaves the app
@@ -828,7 +829,7 @@ function App() {
   useEffect(() => {
     if (view !== "app") return;
     try { if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual"; } catch {}
-    const jump = () => { try { window.scrollTo(0, 0); } catch {} };
+    const jump = () => { try { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; } catch {} };
     jump();
     const r = requestAnimationFrame(jump);
     const t = setTimeout(jump, 60);
@@ -997,8 +998,8 @@ function App() {
     <div className="gcq">
       <Styles />
       <AnnounceBar />
-      <div className="wrap">
-        <div style={{ flex: 1, paddingTop: 16, paddingBottom: 12 }}>
+      <div className="wrap" style={{ height: "100dvh", overflow: "hidden" }}>
+        <div ref={scrollerRef} style={{ flex: 1, minHeight: 0, paddingTop: 16, paddingBottom: 12, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
           <div className="codebar">
             <div className="ptsbox">
               <span className="codebar-lbl">Points</span>
