@@ -1,5 +1,30 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" /><title>Connection Quest</title>
+<meta name="description" content="Your passport to the room. The networking game for the Asia Pacific Business Forum 2026." />
+<link rel="canonical" href="https://www.myconnectionquest.com/" />
+<meta name="theme-color" content="#00314a" />
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Connection Quest" />
+<meta property="og:title" content="Connection Quest" />
+<meta property="og:description" content="Your passport to the room. The networking game for the Asia Pacific Business Forum 2026." />
+<meta property="og:url" content="https://www.myconnectionquest.com/" />
+<meta property="og:image" content="https://www.myconnectionquest.com/og-image.jpg" />
+<meta property="og:image:secure_url" content="https://www.myconnectionquest.com/og-image.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Connection Quest — your passport to the room" />
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Connection Quest" />
+<meta name="twitter:description" content="Your passport to the room. The networking game for the Asia Pacific Business Forum 2026." />
+<meta name="twitter:image" content="https://www.myconnectionquest.com/og-image.jpg" />
+<meta name="twitter:image:alt" content="Connection Quest — your passport to the room" />
+<!-- Icons / add to home screen -->
+<link rel="icon" type="image/png" sizes="48x48" href="https://www.myconnectionquest.com/favicon.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="https://www.myconnectionquest.com/icon-512.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="https://www.myconnectionquest.com/apple-touch-icon.png" />
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
@@ -738,6 +763,7 @@ function AnnounceBar() {
 function App() {
   const [view, setView] = useState("boot"); // boot | landing | register | app | admin | screen
   const [me, setMe] = useState(null);       // users:{id} record on this device
+  const [prefillEmail, setPrefillEmail] = useState(""); // email typed at sign-in, carried into Register
   const [inbox, setInbox] = useState([]);   // inbound point events for me
   const [tab, setTab] = useState("passport");
   const [toast, setToast] = useState(null);
@@ -953,8 +979,8 @@ function App() {
     return (<><Styles /><ScreenGate onExit={() => setView("landing")}><AnnounceBar />{classic ? <BigScreen onExit={() => setView("landing")} onAdmin={() => setView("admin")} /> : <BigScreenLive onExit={() => setView("landing")} onAdmin={() => setView("admin")} />}</ScreenGate></>);
   }
   if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} onScreen={() => setView("screen")} /></>);
-  if (view === "landing") return (<><Styles /><AnnounceBar /><Landing onAuthed={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
-  if (view === "register") return (<><Styles /><AnnounceBar /><Register onDone={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
+  if (view === "landing") return (<><Styles /><AnnounceBar /><Landing onAuthed={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={(email) => { setPrefillEmail(email || ""); setView("register"); }} onScreen={() => setView("screen")} /></>);
+  if (view === "register") return (<><Styles /><AnnounceBar /><Register initialEmail={prefillEmail} onDone={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
 
   // ---- main app ----
   return (
@@ -1217,7 +1243,7 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
       if (rec) { setBusy(false); onAuthed(rec); return; }
     }
     setBusy(false);
-    onRegister();
+    onRegister(e);
   }
 
   return (
@@ -1287,8 +1313,8 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
 /* ============================================================================
    REGISTER — Icebreaker Blueprint unlocks the passport + Connect Code
 ============================================================================ */
-function Register({ onDone, onBack }) {
-  const [f, setF] = useState({ email: "", name: "", market: "", team: "", tenure: "", nationality: "", h1: "", h2: "", h3: "", exotic: "", languages: "", table: "" });
+function Register({ onDone, onBack, initialEmail }) {
+  const [f, setF] = useState({ email: initialEmail || "", name: "", market: "", team: "", tenure: "", nationality: "", h1: "", h2: "", h3: "", exotic: "", languages: "", table: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
