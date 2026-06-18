@@ -125,8 +125,14 @@ const QP = Object.fromEntries(MISSIONS.map((m) => [m.id, m.pts]));
 // ---- Quest config ----------------------------------------------------------
 // Times are fixed UTC epochs for the JST event schedule, so they don't depend on
 // the device timezone (Date.now() is UTC ms everywhere). Event: Mon 22 Jun 2026 JST.
-const DINNER_START = Date.UTC(2026, 5, 22, 8, 45, 0);   // 17:45 JST
-const DINNER_END   = Date.UTC(2026, 5, 22, 12, 0, 0);   // 21:00 JST
+// Dinner Doer fires daily on connections made 18:00–21:00 JST (any day, not date-locked).
+// ts is UTC ms; shift +9h and read JST time-of-day so it's device-timezone independent.
+const inDinnerWindow = (ts) => {
+  if (!ts) return false;
+  const j = new Date(ts + 9 * 3600 * 1000);
+  const m = j.getUTCHours() * 60 + j.getUTCMinutes();
+  return m >= 18 * 60 && m <= 21 * 60; // 18:00–21:00 JST
+};
 const TABLE_LEAD_AT = Date.UTC(2026, 5, 22, 6, 0, 0);   // 15:00 JST
 const SPEED_WINDOW_MS = 15 * 60 * 1000;                 // rolling 15 minutes
 const SPEED_TARGET = 5;
@@ -1156,8 +1162,8 @@ async function applyAutoAwards(rec, evs) {
   // Market Scholar — ace three different market quizzes
   if (Object.keys(next.apacAced || {}).length >= SCHOLAR_TARGET) award("q_scholar");
 
-  // Dinner Doer — 3 connections inside the dinner window
-  if (cons.filter((c) => c.ts && c.ts >= DINNER_START && c.ts <= DINNER_END).length >= DINNER_TARGET) award("q_dinner");
+  // Dinner Doer — 3 connections inside the daily dinner window (18:00–20:30 JST)
+  if (cons.filter((c) => inDinnerWindow(c.ts)).length >= DINNER_TARGET) award("q_dinner");
 
   // Unforgettable — someone scored 3/3 on a quiz about you
   if ((evs || []).some((e) => e.type === "trivia" && e.perfect)) award("q_unforget");
