@@ -466,7 +466,7 @@ function Styles() {
     @keyframes stampin{0%{opacity:0;transform:scale(2.5)}55%{opacity:1}70%{transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
     @keyframes gcq-confetti{0%{opacity:0;transform:translate3d(0,-10px,0) rotate(0)}8%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx,0),105vh,0) rotate(var(--rot,720deg))}}
     @media (prefers-reduced-motion:reduce){.stmp .ink{animation:none}}
-    .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;touch-action:manipulation;
       font-size:10px;font-weight:700;color:#9fb4bd;background:none;border:none;cursor:pointer;transition:color .2s}
     .tab.on{color:#fff}
     .tab .dot{width:5px;height:5px;border-radius:50%;background:var(--green);opacity:0}
@@ -801,6 +801,16 @@ function App() {
     try { requestAnimationFrame(() => { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; }); } catch { try { if (scrollerRef.current) scrollerRef.current.scrollTop = 0; } catch {} }
   }, []);
 
+  // iOS can swallow the synthesized click on the first tap after a view change,
+  // while pointerup fires reliably. Drive nav off pointerup and dedupe the
+  // trailing click so it never double-fires; keyboard/synthetic clicks still work.
+  const lastTapRef = useRef(0);
+  const tabActivate = (k) => (e) => {
+    if (e && e.type === "click" && Date.now() - lastTapRef.current < 700) return;
+    if (e && e.type === "pointerup") lastTapRef.current = Date.now();
+    navTo(k);
+  };
+
   useEffect(() => {
     if (view !== "app") return;
     if (typeof document !== "undefined" && document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -1028,7 +1038,7 @@ function App() {
         </div>
         <div className="nav">
           {[["passport", "Passport"], ["connect", "Connect"], ["quiz", "Quiz"], ["learn", "Learn"], ["missions", "Quests"], ["explore", "Explore"]].map(([k, l]) => (
-            <button key={k} className={"tab" + (tab === k ? " on" : "")} onClick={() => navTo(k)}>
+            <button key={k} className={"tab" + (tab === k ? " on" : "")} onPointerUp={tabActivate(k)} onClick={tabActivate(k)}>
               <TabIcon name={k} /><span>{l}</span><span className="dot" />
             </button>
           ))}
