@@ -576,7 +576,7 @@ const EXPLORE_PLACES = [
   { name: "Imakatsu Roppongi", cat: "Tuck In", note: "Famous chicken tender cutlet.", q: "Imakatsu Roppongi, Minato City, Tokyo" },
   { name: "Ippudo Roppongi", cat: "Tuck In", note: "Tonkotsu (pork bone broth) ramen.", q: "Ippudo Roppongi, Minato City, Tokyo" },
   { name: "Burger Revolution Tokyo Roppongi", cat: "Tuck In", note: "Who does not like burgers?", q: "Burger Revolution Tokyo Roppongi, Minato City, Tokyo" },
-  { name: "PST Roppongi (Pizza Studio Tamaki)", cat: "Tuck In", note: "Pizza. 1 min from the office, book a table before you go.", q: "Pizza Studio Tamaki PST Roppongi, Minato City, Tokyo" },
+  { name: "PST Roppongi (Pizza Studio Tamaki)", cat: "Tuck In", note: "1 min from the office, book a table before you go.", q: "Pizza Studio Tamaki PST Roppongi, Minato City, Tokyo" },
   { name: "Gonpachi Nishi-Azabu", cat: "After-hours", note: "Famous spot visited by Obama.", q: "Gonpachi Nishi-Azabu, Minato City, Tokyo" },
   { name: "Uoshin Nogizaka", cat: "After-hours", note: "Casual izakaya.", q: "Uoshin Nogizaka, Minato City, Tokyo" },
   { name: "Uokin Roppongi", cat: "After-hours", note: "Very casual, open for lunch and dinner.", q: "Uokin Roppongi, Minato City, Tokyo" },
@@ -950,7 +950,7 @@ function App() {
   if (view === "boot") return <Styles />;
   if (view === "screen") {
     const classic = SCREEN_CLASSIC || (typeof window !== "undefined" && /[?&]screen=classic/.test(window.location.search));
-    return (<><Styles /><AnnounceBar />{classic ? <BigScreen onExit={() => setView("landing")} onAdmin={() => setView("admin")} /> : <BigScreenLive onExit={() => setView("landing")} onAdmin={() => setView("admin")} />}</>);
+    return (<><Styles /><ScreenGate onExit={() => setView("landing")}><AnnounceBar />{classic ? <BigScreen onExit={() => setView("landing")} onAdmin={() => setView("admin")} /> : <BigScreenLive onExit={() => setView("landing")} onAdmin={() => setView("admin")} />}</ScreenGate></>);
   }
   if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} onScreen={() => setView("screen")} /></>);
   if (view === "landing") return (<><Styles /><AnnounceBar /><Landing onAuthed={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={() => setView("register")} onScreen={() => setView("screen")} /></>);
@@ -2608,6 +2608,24 @@ function BigScreen({ onExit }) {
 /* ============================================================================
    ADMIN / GAMESMASTER — open with ?admin
 ============================================================================ */
+// Leaderboard PIN gate — same PIN and styling as the Gamesmaster gate.
+function ScreenGate({ children, onExit }) {
+  const [ok, setOk] = useState(false);
+  const [pin, setPin] = useState("");
+  if (ok) return children;
+  return (
+    <div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}>
+      <div className="card">
+        <div className="eyebrow" style={{ color: "var(--navy)" }}>Leaderboard access</div>
+        <input className="input" style={{ marginTop: 10 }} type="password" placeholder="PIN" value={pin}
+          onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === "Enter" && setOk(pin === ADMIN_PIN)} />
+        <button className="btn btn-navy" style={{ marginTop: 10 }} onClick={() => setOk(pin === ADMIN_PIN)}>Enter</button>
+        <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={onExit}>Back</button>
+      </div>
+    </div></div>
+  );
+}
+
 function Admin({ onExit, onScreen }) {
   const [ok, setOk] = useState(false);
   const [pin, setPin] = useState("");
