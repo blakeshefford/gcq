@@ -934,7 +934,7 @@ function App() {
     const cons = [...(rec.connections || [])];
     for (const e of evs.filter((x) => x.type === "connection")) {
       if (!cons.some((c) => c.id === e.fromId)) {
-        cons.push({ id: e.fromId, name: e.fromName, market: e.fromMarket, team: e.fromTeam || "", hobbies: e.fromHobbies || [], exotic: e.fromExotic || "", nationality: e.fromNationality || "", tenure: e.fromTenure || "", ts: e.ts, in: true });
+        cons.push({ id: e.fromId, name: e.fromName, market: e.fromMarket, team: e.fromTeam || "", hobbies: e.fromHobbies || [], exotic: e.fromExotic || "", nationality: e.fromNationality || "", tenure: e.fromTenure || "", languages: e.fromLanguages || "", table: e.fromTable || "", ts: e.ts, in: true });
         changed = true;
       }
     }
@@ -1225,7 +1225,7 @@ async function awardConnection(me, peer, mult) {
     } catch (e) {}
   }
 
-  const conn = { id: peer.id, name: peer.name, market: peer.market, team: peer.team || "", hobbies: peer.hobbies || [], exotic: peer.exotic || "", nationality: peer.nationality || "", tenure: peer.tenure || "", ts: Date.now() };
+  const conn = { id: peer.id, name: peer.name, market: peer.market, team: peer.team || "", hobbies: peer.hobbies || [], exotic: peer.exotic || "", nationality: peer.nationality || "", tenure: peer.tenure || "", languages: peer.languages || "", table: peer.table || "", ts: Date.now() };
   const next = {
     ...me,
     selfPoints: (me.selfPoints || 0) + earned + (earlyBird ? PTS.earlyBird : 0),
@@ -1234,7 +1234,7 @@ async function awardConnection(me, peer, mult) {
   };
   await sset("users:" + me.id, next);
   if (!alreadyInbound) {
-    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", fromHobbies: me.hobbies || [], fromExotic: me.exotic || "", fromNationality: me.nationality || "", fromTenure: me.tenure || "", ts: Date.now() };
+    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", fromHobbies: me.hobbies || [], fromExotic: me.exotic || "", fromNationality: me.nationality || "", fromTenure: me.tenure || "", fromLanguages: me.languages || "", fromTable: me.table || "", ts: Date.now() };
     await sset("inbox:" + peer.id + ":" + ev.id, ev);
   }
   return { next, earned, earlyBird };
