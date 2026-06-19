@@ -1666,7 +1666,7 @@ function PersonProfile({ person, onClose, showStats = true }) {
           {row("Languages", person.languages)}
           {row("Table", person.table)}
         </div>
-        <button className="btn btn-ghost" style={{ marginTop: 14 }} onClick={onClose}>Back</button>
+        <button className="btn btn-ghost" style={{ marginTop: 14, touchAction: "manipulation" }} onPointerUp={onClose} onClick={onClose}>Back</button>
       </div>
     </div>
   );
@@ -2714,22 +2714,7 @@ function BigScreen({ onExit }) {
    ADMIN / GAMESMASTER — open with ?admin
 ============================================================================ */
 // Leaderboard PIN gate — same PIN and styling as the Gamesmaster gate.
-function ScreenGate({ children, onExit }) {
-  const [ok, setOk] = useState(false);
-  const [pin, setPin] = useState("");
-  if (ok) return children;
-  return (
-    <div className="gcq"><div className="wrap" style={{ justifyContent: "center" }}>
-      <div className="card">
-        <div className="eyebrow" style={{ color: "var(--navy)" }}>Leaderboard access</div>
-        <input className="input" style={{ marginTop: 10 }} type="password" placeholder="PIN" value={pin}
-          onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === "Enter" && setOk(pin === ADMIN_PIN)} />
-        <button className="btn btn-navy" style={{ marginTop: 10 }} onClick={() => setOk(pin === ADMIN_PIN)}>Enter</button>
-        <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={onExit}>Back</button>
-      </div>
-    </div></div>
-  );
-}
+function ScreenGate({ children }) { return children; }
 
 // Read-only "view as" for the Gamesmaster: renders the real app tabs seeded with a
 // player's record. The single write chokepoint (sset) is gated read-only while this is
@@ -2757,10 +2742,10 @@ function PlayerPreview({ rec, onExit }) {
     try { if (scRef.current) scRef.current.scrollTop = 0; } catch {}
   };
   return (
-    <div className="gcq" style={{ position: "fixed", inset: 0, zIndex: 95, background: "var(--navy)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div className="gcq" style={{ position: "fixed", top: 0, left: 0, right: 0, height: "100dvh", zIndex: 95, background: "var(--navy)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ background: "var(--gold)", color: "var(--navy)", padding: "9px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontWeight: 800, fontSize: 13 }}>
         <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Viewing as {rec.name} · read-only</span>
-        <span className="link" style={{ color: "var(--navy)", fontWeight: 800, flexShrink: 0 }} onClick={onExit}>Exit ✕</span>
+        <span className="link" style={{ color: "var(--navy)", fontWeight: 800, flexShrink: 0, padding: "4px 2px", touchAction: "manipulation" }} onPointerUp={onExit} onClick={onExit}>Exit ✕</span>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", maxWidth: 480, width: "100%", margin: "0 auto", padding: "0 16px" }}>
         <div ref={scRef} style={{ flex: 1, minHeight: 0, paddingTop: 16, paddingBottom: 12, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
@@ -3035,12 +3020,14 @@ function AdminPanel({ onExit, onScreen }) {
                   <div style={{ textAlign: "right" }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)" }}>{u.code}</div><p className="muted" style={{ fontSize: 11 }}>Connect code</p></div>
                 </div>
                 <p style={{ fontSize: 13, margin: "6px 0" }}>Self points: <b>{total}</b> <span className="muted">(inbound credits add on top)</span></p>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <button className="btn btn-ghost" style={{ padding: "8px", fontSize: 13 }} onClick={() => adjust(u, 50)}>+50</button>
-                  <button className="btn btn-ghost" style={{ padding: "8px", fontSize: 13 }} onClick={() => adjust(u, -50)}>−50</button>
-                  <button className="btn btn-ghost" style={{ padding: "8px", fontSize: 13 }} onClick={() => adjust(u, 10)}>+10</button>
-                  <span className="link" style={{ color: "var(--navy)", fontSize: 13, fontWeight: 700, marginLeft: "auto" }} onClick={() => setViewU(u)}>View passport →</span>
-                  <span className="link" style={{ color: "var(--navy)", fontSize: 13, fontWeight: 700 }} onClick={() => setViewProfile(u)}>View profile →</span>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <button className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 13 }} onClick={() => adjust(u, 50)}>+50</button>
+                  <button className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 13 }} onClick={() => adjust(u, -50)}>−50</button>
+                  <button className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 13 }} onClick={() => adjust(u, 10)}>+10</button>
+                </div>
+                <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+                  <span className="link" style={{ color: "var(--navy)", fontSize: 13.5, fontWeight: 700, padding: "6px 0", touchAction: "manipulation" }} onClick={() => setViewU(u)}>View summary</span>
+                  <span className="link" style={{ color: "var(--navy)", fontSize: 13.5, fontWeight: 700, padding: "6px 0", touchAction: "manipulation" }} onClick={() => setViewProfile(u)}>Open their app (read-only)</span>
                 </div>
                 <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Phone died? They simply sign in again with <b>{u.email}</b> to restore this passport and code.</p>
               </div>
