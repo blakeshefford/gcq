@@ -2749,6 +2749,16 @@ function PlayerPreview({ rec, onExit }) {
       </div>
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", maxWidth: 480, width: "100%", margin: "0 auto", padding: "0 16px" }}>
         <div ref={scRef} style={{ flex: 1, minHeight: 0, paddingTop: 16, paddingBottom: 12, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+          <div className="codebar">
+            <div className="ptsbox">
+              <span className="codebar-lbl">Points</span>
+              <span className="ptsval">{(total || 0).toLocaleString()}</span>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <span className="codebar-lbl">Your Connect Code</span>
+              <div className="codebar-val mono">{rec.code}</div>
+            </div>
+          </div>
           {tab === "passport" && <Passport me={me} total={total} inbox={inbox} collected={collected} ping={noop} setMe={setMeLocal} refresh={noRefresh} />}
           {tab === "connect" && <Connect me={me} flash={null} ping={noop} setMe={setMeLocal} refresh={noRefresh} collected={collected} askKnew={noop} />}
           {tab === "quiz" && <QuizHub me={me} ping={noop} setMe={setMeLocal} refresh={noRefresh} askKnew={noop} />}
@@ -2881,6 +2891,13 @@ function AdminPanel({ onExit, onScreen }) {
 
   const filtered = search ? users.filter((u) => (u.name + " " + u.email).toLowerCase().includes(search.toLowerCase())) : [];
 
+  async function openFull(id, mode) {
+    let full = users.find((u) => u.id === id);
+    if (!full) { try { full = await sget("users:" + id); } catch {} }
+    if (!full) { setMsg("Couldn't load that profile."); return; }
+    if (mode === "summary") setViewU(full); else setViewProfile(full);
+  }
+
   return (
     <div className="gcq"><div className="wrap" style={{ paddingTop: 16, paddingBottom: 30 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -2919,11 +2936,17 @@ function AdminPanel({ onExit, onScreen }) {
       <div className="card" style={{ marginBottom: 12 }}>
         <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 8 }}>Top 10</div>
         {scores.slice(0, 10).map((s, i) => (
-          <div className="lb-row" key={s.id}>
-            <span className="lb-rank">{i + 1}</span>
-            <span style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>{s.name}</span>
-            <span className="pill">{s.market}</span>
-            <span style={{ fontWeight: 900, fontFamily: "'Space Mono',monospace", width: 48, textAlign: "right" }}>{s.total}</span>
+          <div key={s.id} style={{ borderBottom: "1px solid var(--line)" }}>
+            <div className="lb-row" style={{ borderBottom: "none", paddingBottom: 2 }}>
+              <span className="lb-rank">{i + 1}</span>
+              <span style={{ flex: 1, fontWeight: 700, fontSize: 14, minWidth: 0, overflowWrap: "anywhere", wordBreak: "break-word" }}>{s.name}</span>
+              <span className="pill">{s.market}</span>
+              <span style={{ fontWeight: 900, fontFamily: "'Space Mono',monospace", width: 48, textAlign: "right" }}>{s.total}</span>
+            </div>
+            <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", padding: "0 0 9px 38px" }}>
+              <span className="link" style={{ color: "var(--navy)", fontSize: 12.5, fontWeight: 700, padding: "3px 0", touchAction: "manipulation" }} onClick={() => openFull(s.id, "summary")}>View summary</span>
+              <span className="link" style={{ color: "var(--navy)", fontSize: 12.5, fontWeight: 700, padding: "3px 0", touchAction: "manipulation" }} onClick={() => openFull(s.id, "app")}>Open their app (read-only)</span>
+            </div>
           </div>
         ))}
         {scores.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No scores yet.</p>}
