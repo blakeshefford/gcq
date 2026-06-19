@@ -1632,7 +1632,7 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
 // Renders whatever fields are present: connections carry name/market/team/tenure/
 // nationality/hobbies/exotic; full user records also have code/selfPoints/connections/
 // languages/table, so those extra sections appear only when available.
-function PersonProfile({ person, onClose, showStats = true }) {
+function PersonProfile({ person, onClose, showStats = true, loading = false }) {
   if (!person) return null;
   const hobbies = (person.hobbies || []).map((h) => (h || "").trim()).filter(Boolean);
   const stamps = (showStats && person.connections) ? collectedMarkets(person).length : null;
@@ -1659,12 +1659,18 @@ function PersonProfile({ person, onClose, showStats = true }) {
           </div>
         )}
         <div style={{ marginTop: 12 }}>
-          {row("Time with FIL", person.tenure)}
-          {row("Nationality", person.nationality)}
-          {row("Hobbies", hobbies.join(" · "))}
-          {row("Most exotic place", person.exotic)}
-          {row("Languages", person.languages)}
-          {row("Table", person.table)}
+          {loading ? (
+            <div style={{ minHeight: 210, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span className="muted" style={{ fontSize: 13 }}>Loading profile…</span>
+            </div>
+          ) : (<>
+            {row("Time with FIL", person.tenure)}
+            {row("Nationality", person.nationality)}
+            {row("Hobbies", hobbies.join(" · "))}
+            {row("Most exotic place", person.exotic)}
+            {row("Languages", person.languages)}
+            {row("Table", person.table)}
+          </>)}
         </div>
         <button className="btn btn-ghost" style={{ marginTop: 14, touchAction: "manipulation" }} onPointerUp={onClose} onClick={onClose}>Back</button>
       </div>
@@ -1677,10 +1683,17 @@ function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
   const [busy, setBusy] = useState(false);
   const [match, setMatch] = useState(null);
   const [pp, setPp] = useState(null); // person profile sheet (tap someone you've met)
-  // Connections store only a sparse copy of the peer, so pull their full record on tap.
+  const [ppLoading, setPpLoading] = useState(false);
+  // Connections store only a sparse copy of the peer. If it's already complete, show it
+  // instantly; if the late fields (languages/table) are missing, hold the detail rows
+  // until the full record loads so nothing pops in a beat later.
   async function openPerson(c) {
-    setPp({ ...c });
-    if (c && c.id) { try { const full = await sget("users:" + c.id); if (full) setPp({ ...c, ...full }); } catch {} }
+    const needFetch = !!(c && c.id && (c.languages === undefined || c.table === undefined));
+    setPp({ ...c }); setPpLoading(needFetch);
+    if (c && c.id) {
+      try { const full = await sget("users:" + c.id); if (full) setPp({ ...c, ...full }); } catch {}
+      setPpLoading(false);
+    }
   }
 
   async function connect() {
@@ -1753,7 +1766,7 @@ function Connect({ me, flash, ping, setMe, refresh, collected, askKnew }) {
                 <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}><span className="pill">{c.market}</span><span className="muted" style={{ fontSize: 16, lineHeight: 1 }}>›</span></span>
               </div>))}</div>}
       </div>
-      {pp && <PersonProfile person={pp} showStats={false} onClose={() => setPp(null)} />}
+      {pp && <PersonProfile person={pp} loading={ppLoading} showStats={false} onClose={() => setPp(null)} />}
     </div>
   );
 }
