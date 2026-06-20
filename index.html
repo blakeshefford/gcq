@@ -582,14 +582,18 @@ function Styles() {
       .lt-ticker{height:46px}
       .lt-item{font-size:14px;padding:0 15px;height:46px;gap:7px}
       .lt-mk{font-size:12px}
-      .lt-head-row{flex-direction:column !important;gap:10px !important;align-items:flex-start !important}
+      .lt-head{position:relative}
+      .lt-head-row{flex-direction:column !important;gap:8px !important;align-items:stretch !important}
+      .lt-head-row h1{font-size:26px !important;white-space:nowrap}
       .lt-headstats{text-align:left !important;padding-top:0 !important;width:100%}
-      .lt-livepill{justify-content:flex-start !important}
-      .lt-statpair{justify-content:flex-start !important;gap:24px !important;margin-top:6px !important;flex-wrap:wrap}
+      .lt-livepill{position:absolute !important;top:0;right:0;justify-content:flex-end !important}
+      .lt-statpair{flex-direction:column !important;align-items:flex-start !important;gap:4px !important;margin-top:6px !important}
+      .lt-statpair > div{justify-content:flex-start !important;width:auto;gap:10px}
       .lt-statpair span{font-size:13px}
-      .lt-statnum{font-size:26px !important}
-      .lt-head-row h1{font-size:30px !important}
+      .lt-statnum{font-size:22px !important}
       .lt-grid{grid-template-columns:1fr;gap:16px;padding:16px}
+      .lt-credit{flex-direction:column !important;gap:12px;padding:14px 16px 20px !important}
+      .lt-credit-links{position:static !important;right:auto !important;justify-content:center}
       .lt-firstscreen{height:auto;min-height:0;overflow:visible}
       .lt-roomscreen{height:auto;min-height:0;padding:16px 0}
       .rn-stage{aspect-ratio:1/1.1}
@@ -2760,9 +2764,9 @@ function BigScreenLive({ onExit, onAdmin }) {
           <RoomNetwork players={netPlayers} pairs={netPairs} fillStage={!isNarrow} />
         </div>
       </div>
-      <div className="credit" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 36px 16px", position: "relative" }}>
+      <div className="credit lt-credit" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 36px 16px", position: "relative" }}>
         <span>Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></span>
-        <span style={{ position: "absolute", right: 36, display: "flex", gap: 20 }}>
+        <span className="lt-credit-links" style={{ position: "absolute", right: 36, display: "flex", gap: 20 }}>
           {onAdmin && <span className="link" onClick={onAdmin} style={{ color: "#6f8893", fontSize: 13 }}>Gamesmaster →</span>}
           {onExit && <span className="link" onClick={onExit} style={{ color: "#6f8893", fontSize: 13 }}>Exit</span>}
         </span>
