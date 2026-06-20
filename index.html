@@ -582,6 +582,13 @@ function Styles() {
       .lt-ticker{height:46px}
       .lt-item{font-size:14px;padding:0 15px;height:46px;gap:7px}
       .lt-mk{font-size:12px}
+      .lt-head-row{flex-direction:column !important;gap:10px !important;align-items:flex-start !important}
+      .lt-headstats{text-align:left !important;padding-top:0 !important;width:100%}
+      .lt-livepill{justify-content:flex-start !important}
+      .lt-statpair{justify-content:flex-start !important;gap:24px !important;margin-top:6px !important;flex-wrap:wrap}
+      .lt-statpair span{font-size:13px}
+      .lt-statnum{font-size:26px !important}
+      .lt-head-row h1{font-size:30px !important}
       .lt-grid{grid-template-columns:1fr;gap:16px;padding:16px}
       .lt-firstscreen{height:auto;min-height:0;overflow:visible}
       .lt-roomscreen{height:auto;min-height:0;padding:16px 0}
@@ -2647,24 +2654,24 @@ function BigScreenLive({ onExit, onAdmin }) {
   return (
     <div className="scrn lt-wrap" style={{ padding: 0 }}>
       <div className="lt-firstscreen">
-      <div className="lt-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+      <div className="lt-head lt-head-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
         <div>
           <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
           <h1 style={{ fontSize: 40, fontWeight: 900, margin: "6px 0 2px" }}>Connection Quest</h1>
         </div>
-        <div style={{ textAlign: "right", flexShrink: 0, paddingTop: 4 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "flex-end" }}>
+        <div className="lt-headstats" style={{ textAlign: "right", flexShrink: 0, paddingTop: 4 }}>
+          <div className="lt-livepill" style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "flex-end" }}>
             <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#e0607a", display: "inline-block", animation: "gcq-livepulse 1.6s ease-in-out infinite" }} />
             <span style={{ color: "#cfe0e6", fontSize: 13, fontWeight: 800, letterSpacing: ".12em" }}>LIVE</span>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 28, justifyContent: "flex-end", marginTop: 10 }}>
+          <div className="lt-statpair" style={{ display: "flex", alignItems: "baseline", gap: 28, justifyContent: "flex-end", marginTop: 10 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ color: "#9fb4bd", fontSize: 14, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700 }}>Explorers</span>
-              <span style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(count || 0).toLocaleString()}</span>
+              <span className="lt-statnum" style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(count || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ color: "#9fb4bd", fontSize: 14, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700 }}>Connections</span>
-              <span style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(newConnTotal || 0).toLocaleString()}</span>
+              <span className="lt-statnum" style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(newConnTotal || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>
