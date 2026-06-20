@@ -292,7 +292,7 @@ const APAC_QUIZ = {
   ],
   "Korea": [
     { q: "What local term describes massive family-run conglomerates like Samsung and Hyundai?", options: ["Keiretsu", "Chaebols", "State-Owned Enterprises", "Tech Hubs"], a: 1, explain: "Large, family-controlled industrial conglomerates dominating Korea's economy are known as Chaebols." },
-    { q: "What phenomenon describes Korean stocks trading at persistently lower valuations?", options: ["The Seoul Discount", "The Won Devaluation", "The Korea Discount", "The Chaebol Premium"], a: 2, explain: "The \u201cKorea Discount\u201d is the structurally lower valuation of Korean companies, tied to governance and low payouts." },
+    { q: "What long-standing valuation gap in Korean equities have recent reforms sought to address?", options: ["The Seoul Discount", "The Won Devaluation", "The Korea Discount", "The Chaebol Premium"], a: 2, explain: "The \u201cKorea Discount\u201d refers to the structurally lower valuation of Korean companies, tied to governance and low payouts." },
     { q: "What government initiative was launched to solve the \u201cKorea Discount\u201d?", options: ["The Chaebol Breakup Initiative", "The Corporate Value-up Programme", "The Seoul Equity Surge", "The K-Pop Financial Plan"], a: 1, explain: "The Corporate Value-up Programme encourages listed firms to prioritise shareholder returns and governance." },
     { q: "Korea holds a dominant global position manufacturing which components?", options: ["Aerospace software", "Memory chips and semiconductors", "Heavy agricultural machinery", "Luxury textiles"], a: 1, explain: "Korea is a hardware titan, especially in memory chips, advanced displays, and EV batteries." },
     { q: "Korea's Value-up Programme models its strategy on which neighbour?", options: ["China", "Japan", "Singapore", "Australia"], a: 1, explain: "Korea designed its Value-up framework closely after the Tokyo Stock Exchange's governance reforms." },
@@ -315,12 +315,12 @@ const APAC_QUIZ = {
     { q: "Why is the VCC structure popular among fund managers in Singapore?", options: ["It makes all global stocks tax-free", "It lets managers co-mingle multiple sub-funds under one corporate umbrella", "It guarantees a fixed 8.5% return", "It is mandatory for every citizen"], a: 1, explain: "The VCC offers cost-efficiency, letting distinct sub-strategies share one corporate architecture." },
   ],
   "Taiwan": [
-    { q: "What term describes Taiwan's protection derived from its semiconductor monopoly?", options: ["The Tech Blanket", "The Silicon Shield", "The Hardware Castle", "The Microchip Fortress"], a: 1, explain: "Taiwan's dominance in advanced chip manufacturing is widely called its geopolitical \u201cSilicon Shield\u201d." },
+    { q: "Which sector accounts for the largest weighting in Taiwan's stock market?", options: ["Financials", "Consumer Discretionary", "Industrials", "Information Technology"], a: 3, explain: "Taiwan's equity market is heavily dominated by technology companies, reflecting the island's central role in the global electronics and semiconductor supply chain." },
     { q: "Taiwan produces roughly what share of the world's semiconductor supply?", options: ["10%", "30%", "Over 60%", "Exactly 100%"], a: 2, explain: "Taiwan accounts for over 60% of global semiconductor manufacturing capacity \u2014 critical to global supply chains." },
     { q: "Retail investors in Taiwan show a cultural obsession with which fund category?", options: ["High-dividend ETFs", "Long-term government debt", "Gold-backed trackers", "Sustainable agriculture funds"], a: 0, explain: "Taiwan's retail market is intensely yield-oriented, with huge flows into high-dividend ETFs." },
-    { q: "Which technology wave relies on advanced microchips made almost exclusively in Taiwan?", options: ["Block-chain ledger tracking", "The global AI revolution", "Legacy analog telecoms", "Combustion-engine software"], a: 1, explain: "The overwhelming majority of the world's most advanced microchips are made in Taiwan, anchoring the AI boom." },
+    { q: "Which technology wave relies heavily on advanced microchips made in Taiwan?", options: ["Block-chain ledger tracking", "The global AI revolution", "Legacy analog telecoms", "Combustion-engine software"], a: 1, explain: "The overwhelming majority of the world's most advanced microchips are made in Taiwan, anchoring the AI boom." },
     { q: "What investing practice is popular among younger Taiwanese using mobile apps?", options: ["Physical gold storage", "Fractional share trading of local and global tech giants", "Trading paper currency options", "Buying agricultural land tokens"], a: 1, explain: "Mobile-app culture lets tech-literate youth trade small fractional slices of expensive global tech stocks." },
-    { q: "If chip production halts in Taiwan, what happens to the global tech sector?", options: ["Nothing, chips are easily replicated", "A catastrophic bottleneck, as Taiwan makes most advanced AI chips", "It shifts entirely to software", "It switches to analog radio towers"], a: 1, explain: "Taiwan's near-monopoly on advanced chips means any halt cripples global hardware pipelines." },
+    { q: "In 2026, Fidelity Taiwan celebrates how many years of operation?", options: ["30 years", "35 years", "40 years", "45 years"], a: 2, explain: "Fidelity established a presence in Taiwan in 1986 and will officially celebrate its 40th birthday with clients and colleagues in October 2026." },
     { q: "What makes Taiwan's retail investors unique versus conservative savers?", options: ["They avoid the stock market", "They are tech-literate, yield-focused, and comfortable with mobile trading", "They invest only in European bonds", "They ignore stock prices"], a: 1, explain: "The typical Taiwanese retail investor is digitally savvy, tracks global tech, and chases regular dividends." },
   ],
 };
@@ -602,7 +602,7 @@ function Styles() {
 /* ---- Travel-themed nav icons --------------------------------------------- */
 // Explore — embedded neighbourhood guide (Google My Map) plus a grouped, tappable list.
 const EXPLORE_MID = "15Bpbp5PRavq8cpysBHy0Eo2fBe0XUfI";
-const EXPLORE_CATS = ["Tuck In", "Coffee catch-up", "After-hours"];
+const EXPLORE_CATS = ["Tuck In", "Coffee catch-up", "Drinks"];
 const EXPLORE_PLACES = [
   { name: "Lilyan", cat: "Tuck In", note: "Soba (buckwheat noodle). Lunch and dinner.", q: "Lilyan, Roppongi, Minato City, Tokyo" },
   { name: "TsuruTonTan", cat: "Tuck In", note: "Udon. Good for lunch and dinner, alcohol available.", q: "TsuruTonTan Roppongi, Minato City, Tokyo" },
@@ -611,10 +611,10 @@ const EXPLORE_PLACES = [
   { name: "Ippudo Roppongi", cat: "Tuck In", note: "Tonkotsu (pork bone broth) ramen.", q: "Ippudo Roppongi, Minato City, Tokyo" },
   { name: "Burger Revolution Tokyo Roppongi", cat: "Tuck In", note: "Who does not like burgers?", q: "Burger Revolution Tokyo Roppongi, Minato City, Tokyo" },
   { name: "PST Roppongi (Pizza Studio Tamaki)", cat: "Tuck In", note: "1 min from the office, book a table before you go.", q: "Pizza Studio Tamaki PST Roppongi, Minato City, Tokyo" },
-  { name: "Gonpachi Nishi-Azabu", cat: "After-hours", note: "Famous spot visited by Obama.", q: "Gonpachi Nishi-Azabu, Minato City, Tokyo" },
-  { name: "Uoshin Nogizaka", cat: "After-hours", note: "Casual izakaya.", q: "Uoshin Nogizaka, Minato City, Tokyo" },
-  { name: "Uokin Roppongi", cat: "After-hours", note: "Very casual, open for lunch and dinner.", q: "Uokin Roppongi, Minato City, Tokyo" },
-  { name: "Suju Dining Rokkaku Tokyo Midtown", cat: "After-hours", note: "Izakaya.", q: "Suju Dining Rokkaku Tokyo Midtown, Akasaka, Minato City, Tokyo" },
+  { name: "Gonpachi Nishi-Azabu", cat: "Tuck In", note: "Famous spot visited by Obama.", q: "Gonpachi Nishi-Azabu, Minato City, Tokyo" },
+  { name: "Uoshin Nogizaka", cat: "Tuck In", note: "Casual izakaya.", q: "Uoshin Nogizaka, Minato City, Tokyo" },
+  { name: "Uokin Roppongi", cat: "Tuck In", note: "Very casual, open for lunch and dinner.", q: "Uokin Roppongi, Minato City, Tokyo" },
+  { name: "Suju Dining Rokkaku Tokyo Midtown", cat: "Tuck In", note: "Izakaya.", q: "Suju Dining Rokkaku Tokyo Midtown, Akasaka, Minato City, Tokyo" },
   { name: "Salon de The ROND", cat: "Coffee catch-up", note: "Tea salon in a museum.", q: "Salon de The Rond, National Art Center, Roppongi, Tokyo" },
   { name: "Ginza West Aoyama Garden", cat: "Coffee catch-up", note: "Caffeine and sweets.", q: "Ginza West Aoyama Garden, Minato City, Tokyo" },
   { name: "Roppongi Coffee", cat: "Coffee catch-up", note: "Caffeine.", q: "Roppongi Coffee, Roppongi, Minato City, Tokyo" },
@@ -623,10 +623,11 @@ const EXPLORE_PLACES = [
   { name: "ANTICO CAFFE AL AVIS Tokyo Midtown", cat: "Tuck In", note: "Panini.", q: "Antico Caffe Al Avis Tokyo Midtown, Akasaka, Minato City, Tokyo" },
   { name: "Nihonbashi Kaisen Don Tsujihan", cat: "Tuck In", note: "Seafood bowl. There can be a long line at lunch.", q: "Tsujihan Tokyo Midtown, Akasaka, Minato City, Tokyo" },
   { name: "Chopped Salad Day Roppongi", cat: "Tuck In", note: "Healthy salad option.", q: "Chopped Salad Day Roppongi, Minato City, Tokyo" },
-  { name: "Ant 'n Bee Ryudocho", cat: "After-hours", note: "Local craft beer at a very casual spot.", q: "Ant n Bee Ryudocho, Minato City, Tokyo" },
+  { name: "Ant 'n Bee Ryudocho", cat: "Drinks", note: "Local craft beer at a very casual spot.", q: "Ant n Bee Ryudocho, Minato City, Tokyo" },
 ];
 
 const PIN_COLORS = [["#5b8def", "#3f6fd8"], ["#3f9e7c", "#2c7d61"], ["#d8ad4e", "#c2922f"], ["#e0607a", "#c8455f"], ["#8f6fb0", "#6f4f92"], ["#2bb3c0", "#1f8f9a"], ["#4ea3d6", "#2f86bd"], ["#e8a04a", "#d4842f"]];
+const CAT_COLORS = { "Tuck In": ["#f2913d", "#e0742a"], "Coffee catch-up": ["#3f9e7c", "#2c7d61"], "Drinks": ["#3a6fd0", "#2452b0"] };
 function Explore() {
   const [focus, setFocus] = useState(null); // selected place (focused map) or null (all pins)
   const mapRef = useRef(null);
@@ -675,7 +676,7 @@ function Explore() {
               <div style={{ display: "grid", gap: 8 }}>
                 {items.map((p) => {
                   const active = focus && focus.q === p.q;
-                  const c = PIN_COLORS[EXPLORE_CATS.indexOf(cat) % PIN_COLORS.length];
+                  const c = CAT_COLORS[cat] || PIN_COLORS[EXPLORE_CATS.indexOf(cat) % PIN_COLORS.length];
                   return (
                     <div key={p.q} onClick={() => select(p)}
                       style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", cursor: "pointer", background: "var(--paper)", border: "1px solid " + (active ? c[1] : "var(--line)"), borderRadius: 12, boxShadow: active ? `0 0 0 2px ${c[1]}22` : "0 1px 0 rgba(0,0,0,.04)" }}>
@@ -1512,17 +1513,17 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
   const pct = nx ? Math.min(100, Math.round(((total - rank.min) / (nx.min - rank.min)) * 100)) : 100;
 
   const [editing, setEditing] = useState(false);
-  const [ef, setEf] = useState({ name: "", team: "", tenure: "", table: "", h1: "", h2: "", h3: "" });
+  const [ef, setEf] = useState({ name: "", team: "", tenure: "", table: "", h1: "", h2: "", h3: "", exotic: "" });
   function openEdit() {
     const h = me.hobbies || [];
-    setEf({ name: me.name || "", team: me.team || "", tenure: me.tenure || "", table: me.table || "", h1: h[0] || "", h2: h[1] || "", h3: h[2] || "" });
+    setEf({ name: me.name || "", team: me.team || "", tenure: me.tenure || "", table: me.table || "", h1: h[0] || "", h2: h[1] || "", h3: h[2] || "", exotic: me.exotic || "" });
     setEditing(true);
   }
   const setE = (k) => (e) => setEf((p) => ({ ...p, [k]: e.target.value }));
   async function saveEdit() {
     const hobbies = [ef.h1.trim(), ef.h2.trim(), ef.h3.trim()];
     const name = ef.name.trim() || me.name;
-    const next = { ...me, name, team: ef.team.trim(), tenure: ef.tenure, table: ef.table, hobbies };
+    const next = { ...me, name, team: ef.team.trim(), tenure: ef.tenure, table: ef.table, hobbies, exotic: ef.exotic.trim() };
     setMe(next); await sset("users:" + me.id, next);
     // keep caches in sync: name + team live in code:, name + table live in score:
     const codeRec = await sget("code:" + me.code);
@@ -1614,6 +1615,9 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
               </div>
             </Field>
             <p className="muted" style={{ fontSize: 12, margin: "2px 0 12px" }}>Your hobbies become the questions peers answer about you in the quiz.</p>
+            <Field label="Most exotic place you've visited">
+              <input className="input" value={ef.exotic} maxLength={40} onChange={setE("exotic")} placeholder="Madagascar" />
+            </Field>
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(false)}>Cancel</button>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveEdit}>Save</button>
@@ -1654,7 +1658,7 @@ function PersonProfile({ person, onClose, showStats = true, loading = false }) {
         </div>
         {showStats && (person.selfPoints != null || stamps != null) && (
           <div style={{ display: "grid", gridTemplateColumns: (person.selfPoints != null && stamps != null) ? "1fr 1fr" : "1fr", gap: 8, marginTop: 12 }}>
-            {person.selfPoints != null && <div className="card" style={{ textAlign: "center", padding: 10 }}><div style={{ fontSize: 22, fontWeight: 900, color: "var(--navy)" }}>{person.selfPoints || 0}</div><div className="eyebrow" style={{ color: "var(--navy)" }}>Self points</div></div>}
+            {person.selfPoints != null && <div className="card" style={{ textAlign: "center", padding: 10 }}><div style={{ fontSize: 22, fontWeight: 900, color: "var(--navy)" }}>{person.selfPoints || 0}</div><div className="eyebrow" style={{ color: "var(--navy)" }}>Points</div></div>}
             {stamps != null && <div className="card" style={{ textAlign: "center", padding: 10 }}><div style={{ fontSize: 22, fontWeight: 900, color: "var(--navy)" }}>{stamps}/{MARKETS.length}</div><div className="eyebrow" style={{ color: "var(--navy)" }}>Stamps</div></div>}
           </div>
         )}
@@ -3053,9 +3057,9 @@ function AdminPanel({ onExit, onScreen }) {
               <div key={u.id} style={{ borderTop: "1px solid var(--line)", paddingTop: 10, marginTop: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div onClick={() => setViewU(u)} style={{ cursor: "pointer", minWidth: 0 }}><p style={{ fontWeight: 800 }}>{u.name}</p><p className="muted" style={{ fontSize: 12 }}>{u.email} · {u.market}{u.team ? ` · ${u.team}` : ""}{u.table ? ` · Table ${u.table}` : ""}</p></div>
-                  <div style={{ textAlign: "right" }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)" }}>{u.code}</div><p className="muted" style={{ fontSize: 11 }}>Connect code</p></div>
+                  <div style={{ textAlign: "right" }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)" }}>{u.code}</div></div>
                 </div>
-                <p style={{ fontSize: 13, margin: "6px 0" }}>Self points: <b>{total}</b> <span className="muted">(inbound credits add on top)</span></p>
+                <p style={{ fontSize: 13, margin: "6px 0" }}>Points: <b>{total}</b> <span className="muted">(inbound credits add on top)</span></p>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   <button className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 13 }} onClick={() => adjust(u, 50)}>+50</button>
                   <button className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 13 }} onClick={() => adjust(u, -50)}>−50</button>
@@ -3065,7 +3069,6 @@ function AdminPanel({ onExit, onScreen }) {
                   <span className="link" style={{ color: "var(--navy)", fontSize: 13.5, fontWeight: 700, padding: "6px 0", touchAction: "manipulation" }} onClick={() => setViewU(u)}>View summary</span>
                   <span className="link" style={{ color: "var(--navy)", fontSize: 13.5, fontWeight: 700, padding: "6px 0", touchAction: "manipulation" }} onClick={() => setViewProfile(u)}>Open their app (read-only)</span>
                 </div>
-                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Phone died? They simply sign in again with <b>{u.email}</b> to restore this passport and code.</p>
               </div>
             );
           })}
