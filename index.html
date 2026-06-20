@@ -467,6 +467,7 @@ function Styles() {
     .stmpwrap.got .stmp-name{color:var(--navy)}
     @keyframes stampin{0%{opacity:0;transform:scale(2.5)}55%{opacity:1}70%{transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
     @keyframes gcq-confetti{0%{opacity:0;transform:translate3d(0,-10px,0) rotate(0)}8%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx,0),105vh,0) rotate(var(--rot,720deg))}}
+    @keyframes gcq-livepulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.78)}}
     @media (prefers-reduced-motion:reduce){.stmp .ink{animation:none}}
     .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;touch-action:manipulation;
       font-size:10px;font-weight:700;color:#9fb4bd;background:none;border:none;cursor:pointer;transition:color .2s}
@@ -520,13 +521,22 @@ function Styles() {
     .bar .track{flex:1;height:18px;background:var(--paper2);border-radius:6px;overflow:hidden}
     .bar .track>span{display:block;height:100%;background:var(--navy);border-radius:6px;transition:width .6s}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .gm-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .gm-stat{text-align:center;padding:14px 10px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+    .gm-statn{font-size:26px;font-weight:900;color:var(--navy);line-height:1.05;font-variant-numeric:tabular-nums}
+    .gm-statl{color:var(--navy);margin-top:6px;white-space:normal;overflow-wrap:break-word;line-height:1.2}
+    @media (max-width:640px){.gm-stats{grid-template-columns:1fr 1fr}.gm-statn{font-size:24px}}
     .lb-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
     .lb-rank{width:26px;font-weight:900;font-family:'Space Mono',monospace;color:var(--navy)}
     .timer{font-family:'Space Mono',monospace;font-size:46px;font-weight:700;text-align:center}
     .link{color:var(--green);font-weight:700;cursor:pointer}
     .scrn{background:var(--navy);color:#fff;min-height:100vh;padding:32px;font-family:'Zen Kaku Gothic New',ui-sans-serif,system-ui,sans-serif}
     .lt-wrap{min-height:100vh;display:flex;flex-direction:column;color:#fff}
-    .lt-head{padding:24px 36px 12px}
+    .lt-firstscreen{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    .lt-belowfold{padding:24px 36px}
+    .lt-bf-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:start}
+    .lt-roomscreen{height:100vh;display:flex;flex-direction:column;padding:24px 0 10px}
+    .lt-head{padding:24px 36px 8px}
     .lt-ticker{overflow:hidden;border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);background:#012537;height:54px;display:flex;align-items:center}
     .lt-track{display:inline-flex;white-space:nowrap;animation:ltscroll linear infinite;will-change:transform}
     @keyframes ltscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
@@ -538,11 +548,11 @@ function Styles() {
     .lt-mk{color:#8fa6b1;font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:600}
     .lt-pts{font-family:'Space Mono',monospace;font-weight:700;color:var(--green)}
     .lt-item.gold .lt-pts{color:var(--gold)}
-    .lt-grid{flex:1;display:grid;grid-template-columns:1.1fr 1fr;gap:24px;padding:22px 36px;min-height:0}
-    .lt-room{padding:0 36px 6px}
+    .lt-grid{flex:1;display:grid;grid-template-columns:0.85fr 1fr;gap:48px;padding:12px 36px 22px;min-height:0;overflow:hidden}
+    .lt-room{padding:0 36px 6px;display:flex;flex-direction:column}
     .lt-card{min-width:0}
     .lt-h2{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
-    .lt-right{display:flex;flex-direction:column;gap:24px;min-height:0}
+    .lt-right{display:flex;flex-direction:column;gap:48px;min-height:0}
     .lt-left{display:flex;flex-direction:column;gap:24px;min-height:0}
     .lt-lrow{display:flex;align-items:center;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.1)}
     .lt-rank{width:34px;font-family:'Space Mono',monospace;font-weight:700;font-size:24px;color:#6f8893}
@@ -574,6 +584,8 @@ function Styles() {
       .lt-mk{font-size:12px}
       .lt-grid{grid-template-columns:1fr;gap:16px;padding:16px}
       .lt-room{padding:0 16px 10px}
+      .lt-belowfold{padding:16px}
+      .lt-bf-grid{grid-template-columns:1fr;gap:16px}
       .lt-right{gap:16px}
       .lt-left{gap:16px}
       .lt-h2{font-size:12px;margin-bottom:12px}
@@ -2462,9 +2474,9 @@ function RoomNetwork({ players, pairs }) {
 
   const pct = hud.total ? Math.round(hud.lit / hud.total * 100) : 0;
   return (
-    <div className="lt-card">
+    <div className="lt-card" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <div className="lt-h2">The room · live network</div>
-      <div className="rn-stage" style={{ position: "relative", width: "100%", aspectRatio: "16 / 6", minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
+      <div className="rn-stage" style={{ position: "relative", width: "100%", flex: 1, minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
         <canvas ref={cvRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: hover ? "pointer" : "default" }} />
         {hover && (() => {
           const p = (players || []).find((x) => x.id === hover.id);
@@ -2582,7 +2594,7 @@ function BigScreenLive({ onExit, onAdmin }) {
       setRows(sorted.slice(0, 10)); setCount(players.length);
       setMarkets(ms); setTables(ts8); setFeed(merged.slice(0, 250));
       setStats({ connections, quizzes, points, active });
-      setNewConnTotal(players.reduce((s, p) => s + ((p && p.newConnections) || 0), 0));
+      setNewConnTotal(pairs.length);
       setNetPlayers(players); setNetPairs(pairs);
       } catch (e) {} finally { busy = false; }
     }
@@ -2618,16 +2630,28 @@ function BigScreenLive({ onExit, onAdmin }) {
 
   return (
     <div className="scrn lt-wrap" style={{ padding: 0 }}>
-      {(onExit || onAdmin) && (
-        <div style={{ position: "fixed", top: 14, right: 18, display: "flex", gap: 20, zIndex: 5 }}>
-          {onAdmin && <span className="link" onClick={onAdmin} style={{ color: "#6f8893", fontSize: 13 }}>Gamesmaster →</span>}
-          {onExit && <span className="link" onClick={onExit} style={{ color: "#6f8893", fontSize: 13 }}>Exit</span>}
+      <div className="lt-firstscreen">
+      <div className="lt-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+        <div>
+          <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
+          <h1 style={{ fontSize: 40, fontWeight: 900, margin: "6px 0 2px" }}>Connection Quest</h1>
         </div>
-      )}
-      <div className="lt-head">
-        <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
-        <h1 style={{ fontSize: 40, fontWeight: 900, margin: "6px 0 2px" }}>Connection Quest</h1>
-        <p style={{ color: "#9fb4bd", fontSize: 17 }}>Live leaderboard · {count} explorers in play{newConnTotal > 0 ? ` · ${newConnTotal.toLocaleString()} new connections sparked` : ""}</p>
+        <div style={{ textAlign: "right", flexShrink: 0, paddingTop: 4 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "flex-end" }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#e0607a", display: "inline-block", animation: "gcq-livepulse 1.6s ease-in-out infinite" }} />
+            <span style={{ color: "#cfe0e6", fontSize: 13, fontWeight: 800, letterSpacing: ".12em" }}>LIVE</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 28, justifyContent: "flex-end", marginTop: 10 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span style={{ color: "#9fb4bd", fontSize: 14, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700 }}>Explorers</span>
+              <span style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(count || 0).toLocaleString()}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span style={{ color: "#9fb4bd", fontSize: 14, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700 }}>Connections</span>
+              <span style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(newConnTotal || 0).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="lt-ticker">
@@ -2638,9 +2662,10 @@ function BigScreenLive({ onExit, onAdmin }) {
 
       <div className="lt-grid">
         <div className="lt-left">
-          <div className="lt-card">
+          <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div className="lt-h2">Top explorers</div>
             {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             {rows.map((r, i) => (
               <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
                 <span className="lt-rank">{i + 1}</span>
@@ -2648,25 +2673,14 @@ function BigScreenLive({ onExit, onAdmin }) {
                 <span className="lt-total">{r.total}</span>
               </div>
             ))}
-          </div>
-
-          <div className="lt-card">
-            <div className="lt-h2">Top connectors · connections (new)</div>
-            {connRows.length === 0 && <p style={{ color: "#9fb4bd" }}>No connections yet.</p>}
-            {connRows.map((r, i) => (
-              <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
-                <span className="lt-rank">{i + 1}</span>
-                <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
-                <span className="lt-total">{r.count}<span className="lt-nmk" style={{ marginLeft: 4 }}>({r.fresh})</span></span>
-              </div>
-            ))}
+            </div>
           </div>
         </div>
 
         <div className="lt-right">
-          <div className="lt-card">
+          <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div className="lt-h2">Market race · avg points per person</div>
-            <div className="lt-race">
+            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
               {markets.map((m) => (
                 <div className="lt-rrow" key={m.market}>
                   <span className="lt-rlabel">{m.market}</span>
@@ -2678,9 +2692,9 @@ function BigScreenLive({ onExit, onAdmin }) {
             </div>
           </div>
 
-          <div className="lt-card">
+          <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div className="lt-h2">Table rank · total points</div>
-            <div className="lt-race">
+            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
               {tables.map((t, i) => (
                 <div className="lt-rrow" key={t.table}>
                   <span className="lt-rlabel">Table {t.table}</span>
@@ -2691,7 +2705,22 @@ function BigScreenLive({ onExit, onAdmin }) {
               {tables.length === 0 && <p style={{ color: "#9fb4bd" }}>No table data yet.</p>}
             </div>
           </div>
-
+        </div>
+      </div>
+      </div>
+      <div className="lt-belowfold">
+        <div className="lt-bf-grid">
+          <div className="lt-card">
+            <div className="lt-h2">Top connectors · connections (new)</div>
+            {connRows.length === 0 && <p style={{ color: "#9fb4bd" }}>No connections yet.</p>}
+            {connRows.map((r, i) => (
+              <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
+                <span className="lt-rank">{i + 1}</span>
+                <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
+                <span className="lt-total">{r.count}<span className="lt-nmk" style={{ marginLeft: 4 }}>({r.fresh})</span></span>
+              </div>
+            ))}
+          </div>
           <div className="lt-card">
             <div className="lt-h2">Last 10 minutes</div>
             <div className="lt-stats">
@@ -2703,10 +2732,18 @@ function BigScreenLive({ onExit, onAdmin }) {
           </div>
         </div>
       </div>
-      <div className="lt-room">
-        <RoomNetwork players={netPlayers} pairs={netPairs} />
+      <div className="lt-roomscreen">
+        <div className="lt-room" style={{ flex: 1, minHeight: 0 }}>
+          <RoomNetwork players={netPlayers} pairs={netPairs} />
+        </div>
       </div>
-      <div className="credit" style={{ padding: "10px 0 16px" }}>Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
+      <div className="credit" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 36px 16px", position: "relative" }}>
+        <span>Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></span>
+        <span style={{ position: "absolute", right: 36, display: "flex", gap: 20 }}>
+          {onAdmin && <span className="link" onClick={onAdmin} style={{ color: "#6f8893", fontSize: 13 }}>Gamesmaster →</span>}
+          {onExit && <span className="link" onClick={onExit} style={{ color: "#6f8893", fontSize: 13 }}>Exit</span>}
+        </span>
+      </div>
       {viewProfile && <PlayerPreview rec={viewProfile} onExit={() => setViewProfile(null)} />}
     </div>
   );
@@ -2886,6 +2923,10 @@ function AdminPanel({ onExit, onScreen }) {
   const dist = {};
   scores.forEach((s) => { dist[s.market] = (dist[s.market] || 0) + 1; });
   const maxd = Math.max(1, ...Object.values(dist));
+  // Connection totals: each user's own connections array is one-directional, so the
+  // sum across users is the total connection count. New connections come off score records.
+  const connTotal = users.reduce((s, u) => s + ((u && u.connections && u.connections.length) || 0), 0);
+  const newConnTotal = scores.reduce((s, u) => s + ((u && u.newConnections) || 0), 0);
 
   async function trigger(title, desc, mult, mins) {
     const f = { id: eid(), title, desc, mult, endsAt: Date.now() + mins * 60000 };
@@ -2963,14 +3004,22 @@ function AdminPanel({ onExit, onScreen }) {
       </div>
       {msg && <div className="flash" style={{ marginBottom: 12, background: "var(--green)" }}>{msg}</div>}
 
-      <div className="grid2" style={{ marginBottom: 12 }}>
-        <div className="card" style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 34, fontWeight: 900, color: "var(--navy)" }}>{users.length}</div>
-          <div className="eyebrow" style={{ color: "var(--navy)" }}>Registered</div>
+      <div className="gm-stats" style={{ marginBottom: 12 }}>
+        <div className="card gm-stat">
+          <div className="gm-statn">{users.length.toLocaleString()}</div>
+          <div className="eyebrow gm-statl">Registered</div>
         </div>
-        <div className="card" style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 34, fontWeight: 900, color: "var(--navy)" }}>{Object.keys(dist).length}</div>
-          <div className="eyebrow" style={{ color: "var(--navy)" }}>Markets active</div>
+        <div className="card gm-stat">
+          <div className="gm-statn">{Object.keys(dist).length}</div>
+          <div className="eyebrow gm-statl">Markets active</div>
+        </div>
+        <div className="card gm-stat">
+          <div className="gm-statn">{connTotal.toLocaleString()}</div>
+          <div className="eyebrow gm-statl">Connections</div>
+        </div>
+        <div className="card gm-stat">
+          <div className="gm-statn">{newConnTotal.toLocaleString()}</div>
+          <div className="eyebrow gm-statl">New connections</div>
         </div>
       </div>
 
