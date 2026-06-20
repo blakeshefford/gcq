@@ -340,7 +340,7 @@ async function sget(k){try{const r=await sbFetch("/rest/v1/kv?select=value&key=e
 async function kvExists(k){try{const r=await sbFetch("/rest/v1/kv?select=key&key=eq."+encodeURIComponent(k),{headers:sbHeaders()});if(!r.ok)return"unknown";const rows=await r.json();if(!Array.isArray(rows))return"unknown";return rows.length?"present":"absent";}catch{return"unknown";}}
 let __RO = false; // read-only guard: when true (player preview), all writes no-op
 function RO_set(v){ __RO = !!v; }
-async function sset(k,v){if(__RO)return true;try{const r=await sbFetch("/rest/v1/kv",{method:"POST",headers:sbHeaders({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key:k,value:v})});return r.ok;}catch{return false;}}
+async function sset(k,v){if(__RO)return true;for(let attempt=0;attempt<3;attempt++){try{const r=await sbFetch("/rest/v1/kv",{method:"POST",headers:sbHeaders({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key:k,value:v})});if(r.ok)return true;}catch(e){}if(attempt<2)await new Promise(res=>setTimeout(res,400*(attempt+1)));}return false;}
 async function slist(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=key&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows)out.push(x.key);if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
 async function sgetAll(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=value&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows){if(x&&x.value)out.push(x.value);}if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
 async function sgetAllKV(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=key,value&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows){if(x&&x.value)out.push({key:x.key,value:x.value});}if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
@@ -2586,7 +2586,7 @@ function BigScreenLive({ onExit, onAdmin }) {
       setNetPlayers(players); setNetPairs(pairs);
       } catch (e) {} finally { busy = false; }
     }
-    load(); const t = setInterval(load, 6000); return () => { alive = false; clearInterval(t); };
+    load(); const t = setInterval(load, 15000); return () => { alive = false; clearInterval(t); };
   }, []);
 
   const PROMPTS = ["Meet someone new to score +20", "A new market stamp is worth +30", "Collect every market for a +300 bonus", "Run a quiz with a new contact", "Three markets unlocks a +150 bonus", "Find someone from a market you haven't met"];
