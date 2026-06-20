@@ -2627,6 +2627,9 @@ function BigScreenLive({ onExit, onAdmin }) {
 
   const maxMarket = Math.max(1, ...markets.map((m) => m.avg));
   const maxTable = Math.max(1, ...tables.map((t) => t.total));
+  // With only a handful of registrations, spreading rows across the full height looks
+  // broken. Pack to the top until the board is full enough to justify edge-to-edge.
+  const spread = rows.length >= 7 ? "space-between" : "flex-start";
 
   return (
     <div className="scrn lt-wrap" style={{ padding: 0 }}>
@@ -2665,7 +2668,7 @@ function BigScreenLive({ onExit, onAdmin }) {
           <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             <div className="lt-h2">Top explorers</div>
             {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 4 : 0 }}>
             {rows.map((r, i) => (
               <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
                 <span className="lt-rank">{i + 1}</span>
@@ -2680,7 +2683,7 @@ function BigScreenLive({ onExit, onAdmin }) {
         <div className="lt-right">
           <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div className="lt-h2">Market race · avg points per person</div>
-            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
               {markets.map((m) => (
                 <div className="lt-rrow" key={m.market}>
                   <span className="lt-rlabel">{m.market}</span>
@@ -2694,7 +2697,7 @@ function BigScreenLive({ onExit, onAdmin }) {
 
           <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div className="lt-h2">Table rank · total points</div>
-            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
               {tables.map((t, i) => (
                 <div className="lt-rrow" key={t.table}>
                   <span className="lt-rlabel">Table {t.table}</span>
