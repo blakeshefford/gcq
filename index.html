@@ -1648,8 +1648,12 @@ function PersonProfile({ person, onClose, showStats = true, loading = false }) {
   ) : null;
   return (
     <div className="modal" style={{ alignItems: "center" }} onClick={onClose}>
-      <div className="sheet" style={{ borderRadius: 18, maxWidth: 380, margin: "0 16px", maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+      <div className="sheet" style={{ borderRadius: 18, maxWidth: 380, margin: "0 16px", maxHeight: "86vh", overflowY: "auto", position: "relative" }} onClick={(e) => e.stopPropagation()}>
+        <button aria-label="Close" onPointerUp={onClose} onClick={onClose}
+          style={{ position: "absolute", top: 10, right: 10, width: 32, height: 32, borderRadius: "50%", border: "1px solid var(--line)", background: "var(--paper2)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", touchAction: "manipulation", zIndex: 2 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, paddingRight: 36 }}>
           <div style={{ minWidth: 0 }}>
             <h2 className="h2" style={{ margin: 0, overflowWrap: "anywhere", wordBreak: "break-word" }}>{person.name}</h2>
             <p className="muted" style={{ fontSize: 13, margin: "3px 0 0" }}>{[person.market, person.team].filter(Boolean).join(" · ")}</p>
@@ -3055,9 +3059,9 @@ function AdminPanel({ onExit, onScreen }) {
             const total = (u.selfPoints || 0);
             return (
               <div key={u.id} style={{ borderTop: "1px solid var(--line)", paddingTop: 10, marginTop: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div onClick={() => setViewU(u)} style={{ cursor: "pointer", minWidth: 0 }}><p style={{ fontWeight: 800 }}>{u.name}</p><p className="muted" style={{ fontSize: 12 }}>{u.email} · {u.market}{u.team ? ` · ${u.team}` : ""}{u.table ? ` · Table ${u.table}` : ""}</p></div>
-                  <div style={{ textAlign: "right" }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)" }}>{u.code}</div></div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                  <div onClick={() => setViewU(u)} style={{ cursor: "pointer", minWidth: 0 }}><p style={{ fontWeight: 800, margin: 0 }}>{u.name}</p><p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>{u.email} · {u.market}{u.team ? ` · ${u.team}` : ""}{u.table ? ` · Table ${u.table}` : ""}</p></div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)", lineHeight: 1.1 }}>{u.code}</div></div>
                 </div>
                 <p style={{ fontSize: 13, margin: "6px 0" }}>Points: <b>{total}</b> <span className="muted">(inbound credits add on top)</span></p>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
