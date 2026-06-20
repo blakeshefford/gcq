@@ -340,6 +340,9 @@ async function sget(k){try{const r=await sbFetch("/rest/v1/kv?select=value&key=e
 async function kvExists(k){try{const r=await sbFetch("/rest/v1/kv?select=key&key=eq."+encodeURIComponent(k),{headers:sbHeaders()});if(!r.ok)return"unknown";const rows=await r.json();if(!Array.isArray(rows))return"unknown";return rows.length?"present":"absent";}catch{return"unknown";}}
 let __RO = false; // read-only guard: when true (player preview), all writes no-op
 function RO_set(v){ __RO = !!v; }
+let __PAUSED = false; // game pause: when true, no points are awarded (registration/connection records still save, but worth 0)
+function PAUSE_set(v){ __PAUSED = !!v; }
+function isPaused(){ return __PAUSED; }
 async function sset(k,v){if(__RO)return true;for(let attempt=0;attempt<3;attempt++){try{const r=await sbFetch("/rest/v1/kv",{method:"POST",headers:sbHeaders({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key:k,value:v})});if(r.ok)return true;}catch(e){}if(attempt<2)await new Promise(res=>setTimeout(res,400*(attempt+1)));}return false;}
 async function slist(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=key&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows)out.push(x.key);if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
 async function sgetAll(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=value&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows){if(x&&x.value)out.push(x.value);}if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
@@ -762,6 +765,7 @@ function AnnounceBar() {
       const a = await sget("announce:current");
       if (!live) return;
       setAnn(a && a.endsAt > Date.now() ? a : null);
+      try { const p = await sget("paused:flag"); PAUSE_set(!!(p && p.paused)); } catch {}
     };
     poll();
     const t = setInterval(poll, 15000);
@@ -1141,6 +1145,7 @@ async function applyAutoAwards(rec, evs) {
   const mInfo = (id) => MISSIONS.find((x) => x.id === id) || {};
   const award = (id, extra) => {
     if (has(id)) return;
+    if (isPaused()) return;
     next = { ...next, selfPoints: (next.selfPoints || 0) + QP[id], missions: { ...(next.missions || {}), [id]: true } };
     const mi = mInfo(id);
     alerts.push({ name: mi.name, icon: mi.icon, grad: mi.grad, done: true, sub: `+${QP[id]} points`, ...(extra || {}) });
@@ -1148,11 +1153,13 @@ async function applyAutoAwards(rec, evs) {
   const cols = collectedMarkets(next);
 
   // --- passport stamp bonuses (scoring, separate from quests) ---
+  if (!isPaused()) {
   if (cols.length >= 3 && !next.trioAwarded) next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus };
   if (cols.length >= MARKETS.length && !next.fullAwarded) next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
   const units = Math.max(0, cols.length - (STAMP_MILESTONE_AT - 1));
   const paid = next.stampBonusUnits || 0;
   if (units > paid) next = { ...next, stampBonusUnits: units, selfPoints: (next.selfPoints || 0) + PTS.stampMilestone * (units - paid) };
+  }
 
   // --- quests ---
   const cons = next.connections || [];
@@ -1242,11 +1249,12 @@ async function awardConnection(me, peer, mult) {
     const myEvs = await sgetAll("inbox:" + me.id + ":");
     alreadyInbound = myEvs.some((e) => e.type === "connection" && e.fromId === peer.id);
   } catch (e) {}
-  const base = alreadyInbound ? 0 : PTS.connect;
-  const earned = (base + (isNewMarket ? PTS.newMarket : 0)) * mult;
+  const paused = isPaused();
+  const base = (alreadyInbound || paused) ? 0 : PTS.connect;
+  const earned = paused ? 0 : (base + (isNewMarket ? PTS.newMarket : 0)) * mult;
 
   let earlyBird = false;
-  if (!me.earlyBird) {
+  if (!paused && !me.earlyBird) {
     try {
       const claimed = await slist("earlybird:");
       const mine = "earlybird:" + me.id;
@@ -1263,7 +1271,7 @@ async function awardConnection(me, peer, mult) {
   };
   await sset("users:" + me.id, next);
   if (!alreadyInbound) {
-    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", fromHobbies: me.hobbies || [], fromExotic: me.exotic || "", fromNationality: me.nationality || "", fromTenure: me.tenure || "", fromLanguages: me.languages || "", fromTable: me.table || "", ts: Date.now() };
+    const ev = { id: eid(), type: "connection", points: paused ? 0 : PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", fromHobbies: me.hobbies || [], fromExotic: me.exotic || "", fromNationality: me.nationality || "", fromTenure: me.tenure || "", fromLanguages: me.languages || "", fromTable: me.table || "", ts: Date.now() };
     await sset("inbox:" + peer.id + ":" + ev.id, ev);
   }
   return { next, earned, earlyBird };
@@ -1338,19 +1346,19 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
 
             <div className="howto-step"><div className="howto-num">1</div><div>
               <h4>Get your Connect Code</h4>
-              <p>Register once for a 3-digit code. It's your identity for the whole event, on any device.</p>
+              <p>Complete your profile online to receive your unique Connect Code.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">2</div><div>
-              <h4>Meet people, swap codes</h4>
-              <p>Find someone new, trade codes and enter theirs into Connect. You both score, and a market you've not met before earns bonus points and a passport stamp.</p>
+              <h4>Meet people &amp; swap codes</h4>
+              <p>Network with attendees, exchange codes, and enter them into the Connect tab. You both earn points!</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">3</div><div>
-              <h4>Quiz, learn, complete quests</h4>
-              <p>Run a 60-second pop quiz to prove you really talked, pick up Japanese culture and market know-how, and watch quests complete automatically as you go.</p>
+              <h4>Take quizzes &amp; explore</h4>
+              <p>Test your knowledge with trivia, take on Japanese culture challenges, and unlock our Tokyo guide.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">4</div><div>
-              <h4>Collect the full passport</h4>
-              <p>Three market stamps earns a bonus; every market in the room earns a big one. Climb the live leaderboard as you go.</p>
+              <h4>Complete quests for bonus points</h4>
+              <p>Maximize your score by completing curated networking challenges as you meet new peers.</p>
             </div></div>
 
             <div style={{ background: "var(--paper2)", borderRadius: 10, padding: "12px 14px", margin: "4px 0 16px" }}>
