@@ -583,6 +583,9 @@ function Styles() {
       .lt-item{font-size:14px;padding:0 15px;height:46px;gap:7px}
       .lt-mk{font-size:12px}
       .lt-grid{grid-template-columns:1fr;gap:16px;padding:16px}
+      .lt-firstscreen{height:auto;min-height:0;overflow:visible}
+      .lt-roomscreen{height:auto;min-height:0;padding:16px 0}
+      .rn-stage{aspect-ratio:1/1.1}
       .lt-room{padding:0 16px 10px}
       .lt-belowfold{padding:16px}
       .lt-bf-grid{grid-template-columns:1fr;gap:16px}
@@ -2354,7 +2357,7 @@ function Missions({ me, total, ping, setMe, refresh }) {
 /* ============================================================================
    BIG SCREEN — venue leaderboard. Open with ?screen
 ============================================================================ */
-function RoomNetwork({ players, pairs }) {
+function RoomNetwork({ players, pairs, fillStage = true }) {
   const cvRef = useRef(null);
   const nodesRef = useRef({});       // id -> node layout/state
   const orderRef = useRef([]);       // stable id order
@@ -2474,9 +2477,9 @@ function RoomNetwork({ players, pairs }) {
 
   const pct = hud.total ? Math.round(hud.lit / hud.total * 100) : 0;
   return (
-    <div className="lt-card" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+    <div className="lt-card" style={fillStage ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : {}}>
       <div className="lt-h2">The room · live network</div>
-      <div className="rn-stage" style={{ position: "relative", width: "100%", flex: 1, minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
+      <div className="rn-stage" style={{ position: "relative", width: "100%", ...(fillStage ? { flex: 1 } : {}), minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
         <canvas ref={cvRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: hover ? "pointer" : "default" }} />
         {hover && (() => {
           const p = (players || []).find((x) => x.id === hover.id);
@@ -2520,6 +2523,12 @@ function RoomNetwork({ players, pairs }) {
 function BigScreenLive({ onExit, onAdmin }) {
   const [rows, setRows] = useState([]);
   const [count, setCount] = useState(0);
+  const [isNarrow, setIsNarrow] = useState(typeof window !== "undefined" && window.innerWidth <= 760);
+  useEffect(() => {
+    const onR = () => setIsNarrow(window.innerWidth <= 760);
+    window.addEventListener("resize", onR);
+    return () => window.removeEventListener("resize", onR);
+  }, []);
   const [netPlayers, setNetPlayers] = useState([]);
   const [netPairs, setNetPairs] = useState([]);
   const [markets, setMarkets] = useState([]);
@@ -2629,7 +2638,11 @@ function BigScreenLive({ onExit, onAdmin }) {
   const maxTable = Math.max(1, ...tables.map((t) => t.total));
   // With only a handful of registrations, spreading rows across the full height looks
   // broken. Pack to the top until the board is full enough to justify edge-to-edge.
-  const spread = rows.length >= 7 ? "space-between" : "flex-start";
+  // On narrow (mobile) screens never fill/spread — content stacks and scrolls naturally.
+  const fill = !isNarrow;
+  const spread = (!isNarrow && rows.length >= 7) ? "space-between" : "flex-start";
+  const cardFill = fill ? { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 } : {};
+  const colFlex = fill ? 1 : "none";
 
   return (
     <div className="scrn lt-wrap" style={{ padding: 0 }}>
@@ -2665,10 +2678,10 @@ function BigScreenLive({ onExit, onAdmin }) {
 
       <div className="lt-grid">
         <div className="lt-left">
-          <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <div className="lt-card" style={fill ? { flex: 1, display: "flex", flexDirection: "column" } : {}}>
             <div className="lt-h2">Top explorers</div>
             {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 4 : 0 }}>
+            <div style={{ flex: colFlex, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 4 : 0 }}>
             {rows.map((r, i) => (
               <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
                 <span className="lt-rank">{i + 1}</span>
@@ -2681,9 +2694,9 @@ function BigScreenLive({ onExit, onAdmin }) {
         </div>
 
         <div className="lt-right">
-          <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div className="lt-card" style={cardFill}>
             <div className="lt-h2">Market race · avg points per person</div>
-            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
+            <div className="lt-race" style={{ flex: colFlex, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
               {markets.map((m) => (
                 <div className="lt-rrow" key={m.market}>
                   <span className="lt-rlabel">{m.market}</span>
@@ -2695,9 +2708,9 @@ function BigScreenLive({ onExit, onAdmin }) {
             </div>
           </div>
 
-          <div className="lt-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div className="lt-card" style={cardFill}>
             <div className="lt-h2">Table rank · total points</div>
-            <div className="lt-race" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
+            <div className="lt-race" style={{ flex: colFlex, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
               {tables.map((t, i) => (
                 <div className="lt-rrow" key={t.table}>
                   <span className="lt-rlabel">Table {t.table}</span>
@@ -2737,7 +2750,7 @@ function BigScreenLive({ onExit, onAdmin }) {
       </div>
       <div className="lt-roomscreen">
         <div className="lt-room" style={{ flex: 1, minHeight: 0 }}>
-          <RoomNetwork players={netPlayers} pairs={netPairs} />
+          <RoomNetwork players={netPlayers} pairs={netPairs} fillStage={!isNarrow} />
         </div>
       </div>
       <div className="credit" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 36px 16px", position: "relative" }}>
