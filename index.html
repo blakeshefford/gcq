@@ -543,6 +543,7 @@ function Styles() {
     .lt-card{min-width:0}
     .lt-h2{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
     .lt-right{display:flex;flex-direction:column;gap:24px;min-height:0}
+    .lt-left{display:flex;flex-direction:column;gap:24px;min-height:0}
     .lt-lrow{display:flex;align-items:center;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.1)}
     .lt-rank{width:34px;font-family:'Space Mono',monospace;font-weight:700;font-size:24px;color:#6f8893}
     .lt-lrow.top .lt-rank{color:var(--gold)}
@@ -574,6 +575,7 @@ function Styles() {
       .lt-grid{grid-template-columns:1fr;gap:16px;padding:16px}
       .lt-room{padding:0 16px 10px}
       .lt-right{gap:16px}
+      .lt-left{gap:16px}
       .lt-h2{font-size:12px;margin-bottom:12px}
       .lt-lrow{gap:12px;padding:9px 0}
       .lt-rank{width:24px;font-size:19px}
@@ -2513,6 +2515,11 @@ function BigScreenLive({ onExit, onAdmin }) {
   const [feed, setFeed] = useState([]);
   const [stats, setStats] = useState({ connections: 0, quizzes: 0, points: 0, active: 0 });
   const [newConnTotal, setNewConnTotal] = useState(0);
+  const [connRows, setConnRows] = useState([]);
+  const [viewProfile, setViewProfile] = useState(null); // read-only full-app preview from a leaderboard name
+  async function openPreview(id) {
+    try { const full = await sget("users:" + id); if (full) setViewProfile(full); } catch {}
+  }
 
   useEffect(() => {
     let alive = true, busy = false;
@@ -2561,7 +2568,17 @@ function BigScreenLive({ onExit, onAdmin }) {
         .slice(0, 15);
       const merged = [...events, ...joins].sort((a, b) => b.ts - a.ts);
 
+      // Top connectors — degree count per player from the connection pairs,
+      // joined with the brand-new connection count carried on each score record.
+      const deg = {};
+      pairs.forEach(([a, b]) => { if (a) deg[a] = (deg[a] || 0) + 1; if (b) deg[b] = (deg[b] || 0) + 1; });
+      const conns = Object.entries(deg).map(([id, n]) => {
+        const p = idMap[id] || {};
+        return { id, name: p.name || "Guest", market: p.market || "", count: n, fresh: p.newConnections || 0 };
+      }).sort((x, y) => y.count - x.count || y.fresh - x.fresh).slice(0, 10);
+
       if (!alive) return;
+      setConnRows(conns);
       setRows(sorted.slice(0, 10)); setCount(players.length);
       setMarkets(ms); setTables(ts8); setFeed(merged.slice(0, 250));
       setStats({ connections, quizzes, points, active });
@@ -2620,16 +2637,30 @@ function BigScreenLive({ onExit, onAdmin }) {
       </div>
 
       <div className="lt-grid">
-        <div className="lt-card">
-          <div className="lt-h2">Top explorers</div>
-          {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
-          {rows.map((r, i) => (
-            <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")}>
-              <span className="lt-rank">{i + 1}</span>
-              <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
-              <span className="lt-total">{r.total}</span>
-            </div>
-          ))}
+        <div className="lt-left">
+          <div className="lt-card">
+            <div className="lt-h2">Top explorers</div>
+            {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
+            {rows.map((r, i) => (
+              <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
+                <span className="lt-rank">{i + 1}</span>
+                <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
+                <span className="lt-total">{r.total}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="lt-card">
+            <div className="lt-h2">Top connectors · connections (new)</div>
+            {connRows.length === 0 && <p style={{ color: "#9fb4bd" }}>No connections yet.</p>}
+            {connRows.map((r, i) => (
+              <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
+                <span className="lt-rank">{i + 1}</span>
+                <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
+                <span className="lt-total">{r.count}<span className="lt-nmk" style={{ marginLeft: 4 }}>({r.fresh})</span></span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="lt-right">
@@ -2676,6 +2707,7 @@ function BigScreenLive({ onExit, onAdmin }) {
         <RoomNetwork players={netPlayers} pairs={netPairs} />
       </div>
       <div className="credit" style={{ padding: "10px 0 16px" }}>Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
+      {viewProfile && <PlayerPreview rec={viewProfile} onExit={() => setViewProfile(null)} />}
     </div>
   );
 }
