@@ -521,7 +521,7 @@ function Styles() {
     .bar .track>span{display:block;height:100%;background:var(--navy);border-radius:6px;transition:width .6s}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .es-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}
-    .es-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:stretch}
+    .es-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:start}
     .es-grid .card{margin:0}
     .es-3{grid-column:span 3}.es-2{grid-column:span 2}.es-6{grid-column:span 6}
     @media(max-width:900px){.es-grid{grid-template-columns:1fr}.es-3,.es-2,.es-6{grid-column:auto}.es-kpis{grid-template-columns:repeat(3,1fr)}}
@@ -924,7 +924,7 @@ function EventSummary({ onExit }) {
             <div style={{ display: "flex", height: 32, borderRadius: 7, overflow: "hidden", marginBottom: 14, fontSize: 12.5, fontWeight: 800 }}>
               <div style={{ width: mpc(d.mix.conn) + "%", flexShrink: 0, background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.conn.toLocaleString()}</div>
               <div style={{ width: mpc(d.mix.quest) + "%", flexShrink: 0, background: "var(--gold)", color: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.quest.toLocaleString()}</div>
-              <div style={{ width: mpc(d.mix.quiz) + "%", flexShrink: 0, background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.quiz.toLocaleString()}</div>
+              <div style={{ flex: 1, background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.quiz.toLocaleString()}</div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <Legend c="var(--navy)" label="Connections" val={mpc(d.mix.conn) + "% · " + d.mix.conn.toLocaleString()} />
@@ -933,19 +933,21 @@ function EventSummary({ onExit }) {
             </div>
           </div>
 
-          <div className="card es-3">
+          <div className="card es-3" style={{ display: "flex", flexDirection: "column", alignSelf: "stretch" }}>
             <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 12 }}>First-time vs. familiar</div>
             <div style={{ display: "flex", height: 32, borderRadius: 7, overflow: "hidden", marginBottom: 8, fontSize: 12.5, fontWeight: 800 }}>
               <div style={{ width: Math.round(100 * d.firstTime / nkTot) + "%", background: "var(--gold)", color: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.firstTime}</div>
               <div style={{ width: Math.round(100 * d.known / nkTot) + "%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.known}</div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <Legend c="var(--gold)" label="First-time" val={d.firstTime.toLocaleString()} />
-              <Legend c="var(--navy)" label="Already knew" val={d.known.toLocaleString()} />
-            </div>
-            <div style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
-              <span style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)" }}>{d.crossPct}%</span>
-              <span className="muted" style={{ fontSize: 13, marginLeft: 8 }}>cross-market connections</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, justifyContent: "space-between" }}>
+              <Legend c="var(--gold)" label="First-time" val={Math.round(100 * d.firstTime / nkTot) + "% · " + d.firstTime.toLocaleString()} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <Legend c="var(--navy)" label="Existing connection" val={Math.round(100 * d.known / nkTot) + "% · " + d.known.toLocaleString()} />
+                <div style={{ whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)" }}>{d.crossPct}%</span>
+                  <span className="muted" style={{ fontSize: 13, marginLeft: 8 }}>cross-market connections</span>
+                </div>
+              </div>
             </div>
           </div>
 
