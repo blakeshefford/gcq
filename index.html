@@ -522,9 +522,10 @@ function Styles() {
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .es-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}
     .es-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:stretch}
+    .es-xmkt{margin-top:auto;padding-top:14px}
     .es-grid .card{margin:0}
     .es-3{grid-column:span 3}.es-2{grid-column:span 2}.es-6{grid-column:span 6}
-    @media(max-width:900px){.es-grid{grid-template-columns:1fr}.es-3,.es-2,.es-6{grid-column:auto}.es-kpis{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:900px){.es-grid{grid-template-columns:1fr}.es-3,.es-2,.es-6{grid-column:auto}.es-kpis{grid-template-columns:repeat(3,1fr)}.es-xmkt{margin-top:10px;padding-top:0}}
     @media(max-width:520px){.es-kpis{grid-template-columns:repeat(2,1fr)}}
     .es-fill{flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:6px}
     @media(min-width:901px){.es-fill{min-height:520px}}
@@ -943,7 +944,7 @@ function EventSummary({ onExit }) {
               <Legend c="var(--gold)" label="First-time" val={Math.round(100 * d.firstTime / nkTot) + "% · " + d.firstTime.toLocaleString()} />
               <Legend c="var(--navy)" label="Existing connection" val={Math.round(100 * d.known / nkTot) + "% · " + d.known.toLocaleString()} />
             </div>
-            <div style={{ marginTop: "auto", paddingTop: 14, textAlign: "right", whiteSpace: "nowrap" }}>
+            <div className="es-xmkt" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
               <span style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)" }}>{d.crossPct}%</span>
               <span className="muted" style={{ fontSize: 13, marginLeft: 8 }}>cross-market connections</span>
             </div>
