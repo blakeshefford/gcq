@@ -921,7 +921,7 @@ function EventSummary({ onExit }) {
         <div className="es-grid">
           <div className="card es-3">
             <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 12 }}>Activity mix</div>
-            <div style={{ display: "flex", height: 28, borderRadius: 7, overflow: "hidden", marginBottom: 14, fontSize: 12.5, fontWeight: 800 }}>
+            <div style={{ display: "flex", height: 32, borderRadius: 7, overflow: "hidden", marginBottom: 14, fontSize: 12.5, fontWeight: 800 }}>
               <div style={{ width: mpc(d.mix.conn) + "%", flexShrink: 0, background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.conn.toLocaleString()}</div>
               <div style={{ width: mpc(d.mix.quest) + "%", flexShrink: 0, background: "var(--gold)", color: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.quest.toLocaleString()}</div>
               <div style={{ width: mpc(d.mix.quiz) + "%", flexShrink: 0, background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.quiz.toLocaleString()}</div>
@@ -934,7 +934,7 @@ function EventSummary({ onExit }) {
           </div>
 
           <div className="card es-3">
-            <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 12 }}>First-time vs. familiar <span className="muted" style={{ fontWeight: 600 }}>(self-reported)</span></div>
+            <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 12 }}>First-time vs. familiar</div>
             <div style={{ display: "flex", height: 32, borderRadius: 7, overflow: "hidden", marginBottom: 8, fontSize: 12.5, fontWeight: 800 }}>
               <div style={{ width: Math.round(100 * d.firstTime / nkTot) + "%", background: "var(--gold)", color: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.firstTime}</div>
               <div style={{ width: Math.round(100 * d.known / nkTot) + "%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.known}</div>
@@ -943,7 +943,6 @@ function EventSummary({ onExit }) {
               <Legend c="var(--gold)" label="First-time" val={d.firstTime.toLocaleString()} />
               <Legend c="var(--navy)" label="Already knew" val={d.known.toLocaleString()} />
             </div>
-            <div className="muted" style={{ fontSize: 11.5, marginTop: 8 }}>{(d.firstTime + d.known).toLocaleString()} ratings across {d.uniquePairs.toLocaleString()} connections — each person rates whether a contact was new to them.</div>
             <div style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
               <span style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)" }}>{d.crossPct}%</span>
               <span className="muted" style={{ fontSize: 13, marginLeft: 8 }}>cross-market connections</span>
