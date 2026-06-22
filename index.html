@@ -292,7 +292,7 @@ const APAC_QUIZ = {
   ],
   "Korea": [
     { q: "What local term describes massive family-run conglomerates like Samsung and Hyundai?", options: ["Keiretsu", "Chaebols", "State-Owned Enterprises", "Tech Hubs"], a: 1, explain: "Large, family-controlled industrial conglomerates dominating Korea's economy are known as Chaebols." },
-    { q: "What long-standing valuation gap in Korean equities have recent reforms sought to address?", options: ["The Seoul Discount", "The Won Devaluation", "The Korea Discount", "The Chaebol Premium"], a: 2, explain: "The \u201cKorea Discount\u201d refers to the structurally lower valuation of Korean companies, tied to governance and low payouts." },
+    { q: "What phenomenon describes Korean stocks trading at persistently lower valuations?", options: ["The Seoul Discount", "The Won Devaluation", "The Korea Discount", "The Chaebol Premium"], a: 2, explain: "The \u201cKorea Discount\u201d is the structurally lower valuation of Korean companies, tied to governance and low payouts." },
     { q: "What government initiative was launched to solve the \u201cKorea Discount\u201d?", options: ["The Chaebol Breakup Initiative", "The Corporate Value-up Programme", "The Seoul Equity Surge", "The K-Pop Financial Plan"], a: 1, explain: "The Corporate Value-up Programme encourages listed firms to prioritise shareholder returns and governance." },
     { q: "Korea holds a dominant global position manufacturing which components?", options: ["Aerospace software", "Memory chips and semiconductors", "Heavy agricultural machinery", "Luxury textiles"], a: 1, explain: "Korea is a hardware titan, especially in memory chips, advanced displays, and EV batteries." },
     { q: "Korea's Value-up Programme models its strategy on which neighbour?", options: ["China", "Japan", "Singapore", "Australia"], a: 1, explain: "Korea designed its Value-up framework closely after the Tokyo Stock Exchange's governance reforms." },
@@ -315,12 +315,12 @@ const APAC_QUIZ = {
     { q: "Why is the VCC structure popular among fund managers in Singapore?", options: ["It makes all global stocks tax-free", "It lets managers co-mingle multiple sub-funds under one corporate umbrella", "It guarantees a fixed 8.5% return", "It is mandatory for every citizen"], a: 1, explain: "The VCC offers cost-efficiency, letting distinct sub-strategies share one corporate architecture." },
   ],
   "Taiwan": [
-    { q: "Which sector accounts for the largest weighting in Taiwan's stock market?", options: ["Financials", "Consumer Discretionary", "Industrials", "Information Technology"], a: 3, explain: "Taiwan's equity market is heavily dominated by technology companies, reflecting the island's central role in the global electronics and semiconductor supply chain." },
+    { q: "What term describes Taiwan's protection derived from its semiconductor monopoly?", options: ["The Tech Blanket", "The Silicon Shield", "The Hardware Castle", "The Microchip Fortress"], a: 1, explain: "Taiwan's dominance in advanced chip manufacturing is widely called its geopolitical \u201cSilicon Shield\u201d." },
     { q: "Taiwan produces roughly what share of the world's semiconductor supply?", options: ["10%", "30%", "Over 60%", "Exactly 100%"], a: 2, explain: "Taiwan accounts for over 60% of global semiconductor manufacturing capacity \u2014 critical to global supply chains." },
     { q: "Retail investors in Taiwan show a cultural obsession with which fund category?", options: ["High-dividend ETFs", "Long-term government debt", "Gold-backed trackers", "Sustainable agriculture funds"], a: 0, explain: "Taiwan's retail market is intensely yield-oriented, with huge flows into high-dividend ETFs." },
-    { q: "Which technology wave relies heavily on advanced microchips made in Taiwan?", options: ["Block-chain ledger tracking", "The global AI revolution", "Legacy analog telecoms", "Combustion-engine software"], a: 1, explain: "The overwhelming majority of the world's most advanced microchips are made in Taiwan, anchoring the AI boom." },
+    { q: "Which technology wave relies on advanced microchips made almost exclusively in Taiwan?", options: ["Block-chain ledger tracking", "The global AI revolution", "Legacy analog telecoms", "Combustion-engine software"], a: 1, explain: "The overwhelming majority of the world's most advanced microchips are made in Taiwan, anchoring the AI boom." },
     { q: "What investing practice is popular among younger Taiwanese using mobile apps?", options: ["Physical gold storage", "Fractional share trading of local and global tech giants", "Trading paper currency options", "Buying agricultural land tokens"], a: 1, explain: "Mobile-app culture lets tech-literate youth trade small fractional slices of expensive global tech stocks." },
-    { q: "In 2026, Fidelity Taiwan celebrates how many years of operation?", options: ["30 years", "35 years", "40 years", "45 years"], a: 2, explain: "Fidelity established a presence in Taiwan in 1986 and will officially celebrate its 40th birthday with clients and colleagues in October 2026." },
+    { q: "If chip production halts in Taiwan, what happens to the global tech sector?", options: ["Nothing, chips are easily replicated", "A catastrophic bottleneck, as Taiwan makes most advanced AI chips", "It shifts entirely to software", "It switches to analog radio towers"], a: 1, explain: "Taiwan's near-monopoly on advanced chips means any halt cripples global hardware pipelines." },
     { q: "What makes Taiwan's retail investors unique versus conservative savers?", options: ["They avoid the stock market", "They are tech-literate, yield-focused, and comfortable with mobile trading", "They invest only in European bonds", "They ignore stock prices"], a: 1, explain: "The typical Taiwanese retail investor is digitally savvy, tracks global tech, and chases regular dividends." },
   ],
 };
@@ -340,10 +340,7 @@ async function sget(k){try{const r=await sbFetch("/rest/v1/kv?select=value&key=e
 async function kvExists(k){try{const r=await sbFetch("/rest/v1/kv?select=key&key=eq."+encodeURIComponent(k),{headers:sbHeaders()});if(!r.ok)return"unknown";const rows=await r.json();if(!Array.isArray(rows))return"unknown";return rows.length?"present":"absent";}catch{return"unknown";}}
 let __RO = false; // read-only guard: when true (player preview), all writes no-op
 function RO_set(v){ __RO = !!v; }
-let __PAUSED = false; // game pause: when true, no points are awarded (registration/connection records still save, but worth 0)
-function PAUSE_set(v){ __PAUSED = !!v; }
-function isPaused(){ return __PAUSED; }
-async function sset(k,v){if(__RO)return true;for(let attempt=0;attempt<3;attempt++){try{const r=await sbFetch("/rest/v1/kv",{method:"POST",headers:sbHeaders({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key:k,value:v})});if(r.ok)return true;}catch(e){}if(attempt<2)await new Promise(res=>setTimeout(res,400*(attempt+1)));}return false;}
+async function sset(k,v){if(__RO)return true;try{const r=await sbFetch("/rest/v1/kv",{method:"POST",headers:sbHeaders({Prefer:"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify({key:k,value:v})});return r.ok;}catch{return false;}}
 async function slist(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=key&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows)out.push(x.key);if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
 async function sgetAll(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=value&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows){if(x&&x.value)out.push(x.value);}if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
 async function sgetAllKV(prefix){const out=[];let offset=0;const PAGE=1000;try{for(;;){const r=await sbFetch("/rest/v1/kv?select=key,value&order=key.asc&limit="+PAGE+"&offset="+offset+"&key=like."+encodeURIComponent(prefix)+"*",{headers:sbHeaders()});const rows=await r.json();if(!Array.isArray(rows)||rows.length===0)break;for(const x of rows){if(x&&x.value)out.push({key:x.key,value:x.value});}if(rows.length<PAGE)break;offset+=PAGE;}}catch{}return out;}
@@ -470,7 +467,6 @@ function Styles() {
     .stmpwrap.got .stmp-name{color:var(--navy)}
     @keyframes stampin{0%{opacity:0;transform:scale(2.5)}55%{opacity:1}70%{transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
     @keyframes gcq-confetti{0%{opacity:0;transform:translate3d(0,-10px,0) rotate(0)}8%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx,0),105vh,0) rotate(var(--rot,720deg))}}
-    @keyframes gcq-livepulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.78)}}
     @media (prefers-reduced-motion:reduce){.stmp .ink{animation:none}}
     .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;touch-action:manipulation;
       font-size:10px;font-weight:700;color:#9fb4bd;background:none;border:none;cursor:pointer;transition:color .2s}
@@ -524,22 +520,19 @@ function Styles() {
     .bar .track{flex:1;height:18px;background:var(--paper2);border-radius:6px;overflow:hidden}
     .bar .track>span{display:block;height:100%;background:var(--navy);border-radius:6px;transition:width .6s}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .gm-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .gm-stat{text-align:center;padding:14px 10px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
-    .gm-statn{font-size:26px;font-weight:900;color:var(--navy);line-height:1.05;font-variant-numeric:tabular-nums}
-    .gm-statl{color:var(--navy);margin-top:6px;white-space:normal;overflow-wrap:break-word;line-height:1.2}
-    @media (max-width:640px){.gm-stats{grid-template-columns:1fr 1fr}.gm-statn{font-size:24px}}
+    .es-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}
+    .es-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:stretch}
+    .es-grid .card{margin:0}
+    .es-3{grid-column:span 3}.es-2{grid-column:span 2}.es-6{grid-column:span 6}
+    @media(max-width:900px){.es-grid{grid-template-columns:1fr}.es-3,.es-2,.es-6{grid-column:auto}.es-kpis{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:520px){.es-kpis{grid-template-columns:repeat(2,1fr)}}
     .lb-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
     .lb-rank{width:26px;font-weight:900;font-family:'Space Mono',monospace;color:var(--navy)}
     .timer{font-family:'Space Mono',monospace;font-size:46px;font-weight:700;text-align:center}
     .link{color:var(--green);font-weight:700;cursor:pointer}
     .scrn{background:var(--navy);color:#fff;min-height:100vh;padding:32px;font-family:'Zen Kaku Gothic New',ui-sans-serif,system-ui,sans-serif}
     .lt-wrap{min-height:100vh;display:flex;flex-direction:column;color:#fff}
-    .lt-firstscreen{height:100vh;display:flex;flex-direction:column;overflow:hidden}
-    .lt-belowfold{padding:24px 36px}
-    .lt-bf-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:start}
-    .lt-roomscreen{height:100vh;display:flex;flex-direction:column;padding:24px 0 10px}
-    .lt-head{padding:24px 36px 8px}
+    .lt-head{padding:24px 36px 12px}
     .lt-ticker{overflow:hidden;border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);background:#012537;height:54px;display:flex;align-items:center}
     .lt-track{display:inline-flex;white-space:nowrap;animation:ltscroll linear infinite;will-change:transform}
     @keyframes ltscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
@@ -551,12 +544,11 @@ function Styles() {
     .lt-mk{color:#8fa6b1;font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:600}
     .lt-pts{font-family:'Space Mono',monospace;font-weight:700;color:var(--green)}
     .lt-item.gold .lt-pts{color:var(--gold)}
-    .lt-grid{flex:1;display:grid;grid-template-columns:0.85fr 1fr;gap:48px;padding:12px 36px 22px;min-height:0;overflow:hidden}
-    .lt-room{padding:0 36px 6px;display:flex;flex-direction:column}
+    .lt-grid{flex:1;display:grid;grid-template-columns:1.1fr 1fr;gap:24px;padding:22px 36px;min-height:0}
+    .lt-room{padding:0 36px 6px}
     .lt-card{min-width:0}
     .lt-h2{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
-    .lt-right{display:flex;flex-direction:column;gap:48px;min-height:0}
-    .lt-left{display:flex;flex-direction:column;gap:24px;min-height:0}
+    .lt-right{display:flex;flex-direction:column;gap:24px;min-height:0}
     .lt-lrow{display:flex;align-items:center;gap:18px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.1)}
     .lt-rank{width:34px;font-family:'Space Mono',monospace;font-weight:700;font-size:24px;color:#6f8893}
     .lt-lrow.top .lt-rank{color:var(--gold)}
@@ -578,33 +570,16 @@ function Styles() {
     .lt-statn{font-family:'Space Mono',monospace;font-weight:900;font-size:34px;color:#fff;line-height:1}
     .lt-statl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#9fb4bd;margin-top:8px;font-weight:700}
     @media (max-width:760px){
-      .lt-head{padding:28px 16px 6px}
+      .lt-head{padding:46px 16px 6px}
       .lt-head h1{font-size:26px !important;margin:4px 0 2px !important}
       .lt-head p{font-size:14px !important}
       .lt-head .eyebrow{font-size:11px}
       .lt-ticker{height:46px}
       .lt-item{font-size:14px;padding:0 15px;height:46px;gap:7px}
       .lt-mk{font-size:12px}
-      .lt-head{position:relative}
-      .lt-head-row{flex-direction:column !important;gap:8px !important;align-items:stretch !important}
-      .lt-head-row h1{font-size:26px !important;white-space:nowrap}
-      .lt-headstats{text-align:left !important;padding-top:0 !important;width:100%}
-      .lt-livepill{position:absolute !important;top:28px;right:16px;justify-content:flex-end !important}
-      .lt-statpair{flex-direction:column !important;align-items:flex-start !important;gap:4px !important;margin-top:6px !important}
-      .lt-statpair > div{justify-content:flex-start !important;width:auto;gap:10px}
-      .lt-statpair span{font-size:13px}
-      .lt-statnum{font-size:22px !important}
       .lt-grid{grid-template-columns:1fr;gap:16px;padding:16px}
-      .lt-credit{flex-direction:column !important;gap:12px;padding:14px 16px 20px !important}
-      .lt-credit-links{position:static !important;right:auto !important;justify-content:center}
-      .lt-firstscreen{height:auto;min-height:0;overflow:visible}
-      .lt-roomscreen{height:auto;min-height:0;padding:16px 0}
-      .rn-stage{aspect-ratio:1/1.1}
       .lt-room{padding:0 16px 10px}
-      .lt-belowfold{padding:16px}
-      .lt-bf-grid{grid-template-columns:1fr;gap:16px}
       .lt-right{gap:16px}
-      .lt-left{gap:16px}
       .lt-h2{font-size:12px;margin-bottom:12px}
       .lt-lrow{gap:12px;padding:9px 0}
       .lt-rank{width:24px;font-size:19px}
@@ -633,7 +608,7 @@ function Styles() {
 /* ---- Travel-themed nav icons --------------------------------------------- */
 // Explore — embedded neighbourhood guide (Google My Map) plus a grouped, tappable list.
 const EXPLORE_MID = "15Bpbp5PRavq8cpysBHy0Eo2fBe0XUfI";
-const EXPLORE_CATS = ["Tuck In", "Coffee catch-up", "Drinks"];
+const EXPLORE_CATS = ["Tuck In", "Coffee catch-up", "After-hours"];
 const EXPLORE_PLACES = [
   { name: "Lilyan", cat: "Tuck In", note: "Soba (buckwheat noodle). Lunch and dinner.", q: "Lilyan, Roppongi, Minato City, Tokyo" },
   { name: "TsuruTonTan", cat: "Tuck In", note: "Udon. Good for lunch and dinner, alcohol available.", q: "TsuruTonTan Roppongi, Minato City, Tokyo" },
@@ -642,10 +617,10 @@ const EXPLORE_PLACES = [
   { name: "Ippudo Roppongi", cat: "Tuck In", note: "Tonkotsu (pork bone broth) ramen.", q: "Ippudo Roppongi, Minato City, Tokyo" },
   { name: "Burger Revolution Tokyo Roppongi", cat: "Tuck In", note: "Who does not like burgers?", q: "Burger Revolution Tokyo Roppongi, Minato City, Tokyo" },
   { name: "PST Roppongi (Pizza Studio Tamaki)", cat: "Tuck In", note: "1 min from the office, book a table before you go.", q: "Pizza Studio Tamaki PST Roppongi, Minato City, Tokyo" },
-  { name: "Gonpachi Nishi-Azabu", cat: "Tuck In", note: "Famous spot visited by Obama.", q: "Gonpachi Nishi-Azabu, Minato City, Tokyo" },
-  { name: "Uoshin Nogizaka", cat: "Tuck In", note: "Casual izakaya.", q: "Uoshin Nogizaka, Minato City, Tokyo" },
-  { name: "Uokin Roppongi", cat: "Tuck In", note: "Very casual, open for lunch and dinner.", q: "Uokin Roppongi, Minato City, Tokyo" },
-  { name: "Suju Dining Rokkaku Tokyo Midtown", cat: "Tuck In", note: "Izakaya.", q: "Suju Dining Rokkaku Tokyo Midtown, Akasaka, Minato City, Tokyo" },
+  { name: "Gonpachi Nishi-Azabu", cat: "After-hours", note: "Famous spot visited by Obama.", q: "Gonpachi Nishi-Azabu, Minato City, Tokyo" },
+  { name: "Uoshin Nogizaka", cat: "After-hours", note: "Casual izakaya.", q: "Uoshin Nogizaka, Minato City, Tokyo" },
+  { name: "Uokin Roppongi", cat: "After-hours", note: "Very casual, open for lunch and dinner.", q: "Uokin Roppongi, Minato City, Tokyo" },
+  { name: "Suju Dining Rokkaku Tokyo Midtown", cat: "After-hours", note: "Izakaya.", q: "Suju Dining Rokkaku Tokyo Midtown, Akasaka, Minato City, Tokyo" },
   { name: "Salon de The ROND", cat: "Coffee catch-up", note: "Tea salon in a museum.", q: "Salon de The Rond, National Art Center, Roppongi, Tokyo" },
   { name: "Ginza West Aoyama Garden", cat: "Coffee catch-up", note: "Caffeine and sweets.", q: "Ginza West Aoyama Garden, Minato City, Tokyo" },
   { name: "Roppongi Coffee", cat: "Coffee catch-up", note: "Caffeine.", q: "Roppongi Coffee, Roppongi, Minato City, Tokyo" },
@@ -654,11 +629,10 @@ const EXPLORE_PLACES = [
   { name: "ANTICO CAFFE AL AVIS Tokyo Midtown", cat: "Tuck In", note: "Panini.", q: "Antico Caffe Al Avis Tokyo Midtown, Akasaka, Minato City, Tokyo" },
   { name: "Nihonbashi Kaisen Don Tsujihan", cat: "Tuck In", note: "Seafood bowl. There can be a long line at lunch.", q: "Tsujihan Tokyo Midtown, Akasaka, Minato City, Tokyo" },
   { name: "Chopped Salad Day Roppongi", cat: "Tuck In", note: "Healthy salad option.", q: "Chopped Salad Day Roppongi, Minato City, Tokyo" },
-  { name: "Ant 'n Bee Ryudocho", cat: "Drinks", note: "Local craft beer at a very casual spot.", q: "Ant n Bee Ryudocho, Minato City, Tokyo" },
+  { name: "Ant 'n Bee Ryudocho", cat: "After-hours", note: "Local craft beer at a very casual spot.", q: "Ant n Bee Ryudocho, Minato City, Tokyo" },
 ];
 
 const PIN_COLORS = [["#5b8def", "#3f6fd8"], ["#3f9e7c", "#2c7d61"], ["#d8ad4e", "#c2922f"], ["#e0607a", "#c8455f"], ["#8f6fb0", "#6f4f92"], ["#2bb3c0", "#1f8f9a"], ["#4ea3d6", "#2f86bd"], ["#e8a04a", "#d4842f"]];
-const CAT_COLORS = { "Tuck In": ["#f2913d", "#e0742a"], "Coffee catch-up": ["#3f9e7c", "#2c7d61"], "Drinks": ["#3a6fd0", "#2452b0"] };
 function Explore() {
   const [focus, setFocus] = useState(null); // selected place (focused map) or null (all pins)
   const mapRef = useRef(null);
@@ -707,7 +681,7 @@ function Explore() {
               <div style={{ display: "grid", gap: 8 }}>
                 {items.map((p) => {
                   const active = focus && focus.q === p.q;
-                  const c = CAT_COLORS[cat] || PIN_COLORS[EXPLORE_CATS.indexOf(cat) % PIN_COLORS.length];
+                  const c = PIN_COLORS[EXPLORE_CATS.indexOf(cat) % PIN_COLORS.length];
                   return (
                     <div key={p.q} onClick={() => select(p)}
                       style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", cursor: "pointer", background: "var(--paper)", border: "1px solid " + (active ? c[1] : "var(--line)"), borderRadius: 12, boxShadow: active ? `0 0 0 2px ${c[1]}22` : "0 1px 0 rgba(0,0,0,.04)" }}>
@@ -765,7 +739,6 @@ function AnnounceBar() {
       const a = await sget("announce:current");
       if (!live) return;
       setAnn(a && a.endsAt > Date.now() ? a : null);
-      try { const p = await sget("paused:flag"); PAUSE_set(!!(p && p.paused)); } catch {}
     };
     poll();
     const t = setInterval(poll, 15000);
@@ -799,6 +772,208 @@ function AnnounceBar() {
       </div>
       <div aria-hidden="true" style={{ height: reserve }} />
     </>
+  );
+}
+
+// ---- Live Event Summary screen (mirrors the post-event report, minus the timeline) ----
+function EventSummary({ onExit }) {
+  const [data, setData] = useState(null);
+
+  const load = useCallback(async () => {
+    const users = await sgetAll("users:");
+    const scores = await sgetAll("score:");
+    const inbox = await sgetAllKV("inbox:");
+    const byId = {}; users.forEach((u) => { if (u && u.id) byId[u.id] = u; });
+    const marketOf = {}; users.forEach((u) => { if (u && u.id) marketOf[u.id] = u.market || "Other"; });
+
+    const conn = [], triv = [];
+    inbox.forEach(({ key, value }) => {
+      if (!value) return;
+      const rid = (key.split(":")[1]) || "";
+      if (value.type === "connection" && value.fromId && rid) conn.push({ from: value.fromId, to: rid, fromMarket: value.fromMarket || "" });
+      else if (value.type === "trivia" && value.fromId) triv.push({ from: value.fromId });
+    });
+
+    const pairSet = new Set(), nb = {}, made = {}, quizBy = {};
+    conn.forEach((c) => {
+      pairSet.add(c.from < c.to ? c.from + "|" + c.to : c.to + "|" + c.from);
+      (nb[c.from] = nb[c.from] || new Set()).add(c.to);
+      (nb[c.to] = nb[c.to] || new Set()).add(c.from);
+      made[c.from] = (made[c.from] || 0) + 1;
+    });
+    triv.forEach((t) => { quizBy[t.from] = (quizBy[t.from] || 0) + 1; });
+
+    const participants = users.length;
+    const uniquePairs = pairSet.size;
+    const degreeSum = Object.values(nb).reduce((a, s) => a + s.size, 0);
+    const avgConn = participants ? Math.round(degreeSum / participants * 10) / 10 : 0;
+    const firstTime = sum(users, (u) => u.newConnections || 0);
+    const known = sum(users, (u) => u.knownContacts || 0);
+    const cross = conn.filter((c) => (c.fromMarket || "") !== (marketOf[c.to] || "")).length;
+    const crossPct = conn.length ? Math.round(100 * cross / conn.length) : 0;
+    const questCount = (u) => (u.missions ? Object.values(u.missions).filter(Boolean).length : 0);
+    const questsTotal = sum(users, questCount);
+
+    const conn10 = users.filter((u) => (nb[u.id] ? nb[u.id].size : 0) >= 10).length;
+    const new3 = users.filter((u) => (u.newConnections || 0) >= 3).length;
+
+    const qc = {}; MISSIONS.forEach((m) => { qc[m.id] = 0; });
+    users.forEach((u) => { if (u.missions) MISSIONS.forEach((m) => { if (u.missions[m.id]) qc[m.id]++; }); });
+    const quests = MISSIONS.map((m) => ({ name: m.name, n: qc[m.id] })).sort((a, b) => b.n - a.n);
+
+    const dist = {}; users.forEach((u) => { const m = u.market || "Other"; dist[m] = (dist[m] || 0) + 1; });
+    const markets = Object.entries(dist).map(([m, n]) => ({ m, n })).sort((a, b) => b.n - a.n);
+
+    const tbl = {};
+    scores.forEach((s) => {
+      const t = s.table || (byId[s.id] && byId[s.id].table);
+      if (!t) return; const key = String(t);
+      if (!tbl[key]) tbl[key] = { t: key, total: 0, n: 0 };
+      tbl[key].total += (s.total || 0); tbl[key].n++;
+    });
+    const tables = Object.values(tbl).map((x) => ({ ...x, avg: Math.round(x.total / x.n) })).sort((a, b) => b.total - a.total);
+
+    const top = [...scores].sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 10).map((s) => {
+      const u = byId[s.id] || {};
+      const c = made[s.id] || 0, z = quizBy[s.id] || 0, q = questCount(u), tt = (c + z + q) || 1;
+      return {
+        name: s.name || u.name || "?", market: s.market || u.market || "", total: s.total || 0,
+        uniq: nb[s.id] ? nb[s.id].size : 0,
+        pc: Math.round(100 * c / tt), pz: Math.round(100 * z / tt), pq: Math.round(100 * q / tt),
+      };
+    });
+
+    setData({
+      participants, uniquePairs, avgConn, firstTime, known, crossPct,
+      mix: { conn: uniquePairs, quest: questsTotal, quiz: triv.length },
+      conn10, new3, quests, markets, tables, top,
+    });
+  }, []);
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
+
+  if (!data) return (
+    <div className="gcq" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <p style={{ color: "#9fb4bd" }}>Loading event summary…</p>
+    </div>
+  );
+
+  const d = data, P = d.participants || 1;
+  const pct = (n) => Math.round(100 * n / P);
+  const mixTot = (d.mix.conn + d.mix.quest + d.mix.quiz) || 1;
+  const mpc = (n) => Math.round(100 * n / mixTot);
+  const nkTot = (d.firstTime + d.known) || 1;
+  const maxMkt = Math.max(1, ...d.markets.map((x) => x.n));
+  const maxTbl = Math.max(1, ...d.tables.map((x) => x.total));
+
+  const Tile = ({ v, label, note }) => (
+    <div className="card" style={{ textAlign: "center", padding: "16px 12px" }}>
+      <div style={{ fontSize: 32, fontWeight: 900, color: "var(--navy)", lineHeight: 1.05 }}>{v}</div>
+      <div className="eyebrow" style={{ color: "var(--navy)", marginTop: 5 }}>{label}</div>
+      {note ? <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>{note}</div> : null}
+    </div>
+  );
+  const Seg = ({ w, c }) => <div style={{ width: w + "%", background: c, height: "100%" }} />;
+  const Legend = ({ c, label, val }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13 }}>
+      <span style={{ width: 11, height: 11, borderRadius: 3, background: c, display: "inline-block" }} />
+      <span style={{ fontWeight: 700, color: "var(--navy)" }}>{label}</span>
+      <span className="muted">{val}</span>
+    </div>
+  );
+  const Row = ({ label, w, val }) => (
+    <div className="bar" style={{ margin: 0 }}>
+      <span style={{ width: 132, fontSize: 12.5, fontWeight: 700, color: "var(--navy)", flexShrink: 0 }}>{label}</span>
+      <div className="track"><span style={{ width: w + "%" }} /></div>
+      <span style={{ width: 54, fontSize: 12.5, fontWeight: 700, textAlign: "right", flexShrink: 0 }}>{val}</span>
+    </div>
+  );
+  const ChartCard = ({ title, suffix, rows }) => (
+    <div className="card es-2" style={{ display: "flex", flexDirection: "column" }}>
+      <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 12 }}>{title}{suffix ? <span className="muted" style={{ fontWeight: 600 }}> {suffix}</span> : null}</div>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 520 }}>{rows}</div>
+    </div>
+  );
+
+  const KPIS = [
+    { v: d.participants, label: "Participants" },
+    { v: d.uniquePairs.toLocaleString(), label: "Connections", note: "unique pairs" },
+    { v: d.avgConn, label: "Avg connections", note: "per person" },
+    { v: pct(d.conn10) + "%", label: "Made 10+ connections", note: d.conn10 + " of " + d.participants },
+    { v: d.firstTime.toLocaleString(), label: "First-time", note: "new relationships" },
+    { v: pct(d.new3) + "%", label: "Made 3+ new connections", note: d.new3 + " of " + d.participants },
+  ];
+
+  return (
+    <div className="gcq" style={{ overflowY: "auto" }}>
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "22px 24px 48px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+          <h1 className="h1" style={{ color: "#fff", margin: 0 }}>Event Summary</h1>
+          {onExit && <span className="link" onClick={onExit} style={{ color: "#9fb4bd", fontSize: 14 }}>Exit</span>}
+        </div>
+
+        <div className="es-kpis">
+          {KPIS.map((k, i) => <Tile key={i} v={k.v} label={k.label} note={k.note} />)}
+        </div>
+
+        <div className="es-grid">
+          <div className="card es-3">
+            <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 12 }}>Activity mix</div>
+            <div style={{ display: "flex", height: 28, borderRadius: 7, overflow: "hidden", marginBottom: 14, fontSize: 12.5, fontWeight: 800 }}>
+              <div style={{ width: mpc(d.mix.conn) + "%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.conn.toLocaleString()}</div>
+              <div style={{ width: mpc(d.mix.quest) + "%", background: "var(--gold)", color: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.quest.toLocaleString()}</div>
+              <div style={{ width: mpc(d.mix.quiz) + "%", background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.mix.quiz.toLocaleString()}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Legend c="var(--navy)" label="Connections" val={mpc(d.mix.conn) + "% · " + d.mix.conn.toLocaleString()} />
+              <Legend c="var(--gold)" label="Quests" val={mpc(d.mix.quest) + "% · " + d.mix.quest.toLocaleString()} />
+              <Legend c="var(--green)" label="Quizzes" val={mpc(d.mix.quiz) + "% · " + d.mix.quiz.toLocaleString()} />
+            </div>
+          </div>
+
+          <div className="card es-3">
+            <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 12 }}>New vs. existing contacts</div>
+            <div style={{ display: "flex", height: 32, borderRadius: 7, overflow: "hidden", marginBottom: 8, fontSize: 12.5, fontWeight: 800 }}>
+              <div style={{ width: Math.round(100 * d.firstTime / nkTot) + "%", background: "var(--gold)", color: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.firstTime}</div>
+              <div style={{ width: Math.round(100 * d.known / nkTot) + "%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.known}</div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <Legend c="var(--gold)" label="First-time" val={d.firstTime.toLocaleString()} />
+              <Legend c="var(--navy)" label="Already knew" val={d.known.toLocaleString()} />
+            </div>
+            <div style={{ marginTop: 16, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+              <span style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)" }}>{d.crossPct}%</span>
+              <span className="muted" style={{ fontSize: 13, marginLeft: 8 }}>cross-market connections</span>
+            </div>
+          </div>
+
+          <ChartCard title="Market distribution" rows={d.markets.map((x) => <Row key={x.m} label={x.m} w={x.n / maxMkt * 100} val={x.n} />)} />
+          <ChartCard title="Scores by table" suffix="(total points)" rows={d.tables.map((t) => <Row key={t.t} label={"Table " + t.t} w={t.total / maxTbl * 100} val={t.total.toLocaleString()} />)} />
+          <ChartCard title="Quest completion" suffix={"(of " + d.participants + ")"} rows={d.quests.map((q) => <Row key={q.name} label={q.name} w={q.n / P * 100} val={q.n} />)} />
+
+          <div className="card es-6">
+            <div className="eyebrow" style={{ color: "var(--navy)", marginBottom: 6 }}>Top 10</div>
+            <div style={{ display: "flex", fontSize: 10.5, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+              <span style={{ width: 28 }}>#</span><span style={{ flex: 1 }}>Player</span>
+              <span style={{ width: 120 }}>Market</span>
+              <span style={{ width: 70, textAlign: "right" }}>Conns</span>
+              <span style={{ width: 120, textAlign: "right" }}>C / Q / Qz %</span>
+              <span style={{ width: 90, textAlign: "right" }}>Points</span>
+            </div>
+            {d.top.map((u, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", fontSize: 13.5, padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
+                <span className="lb-rank" style={{ width: 28, fontSize: 14, color: i < 3 ? "var(--gold)" : "var(--navy)" }}>{i + 1}</span>
+                <span style={{ flex: 1, minWidth: 0, fontWeight: 700, color: "var(--navy)" }}>{u.name}</span>
+                <span style={{ width: 120 }} className="muted">{u.market}</span>
+                <span style={{ width: 70, textAlign: "right", fontWeight: 700 }}>{u.uniq}</span>
+                <span style={{ width: 120, textAlign: "right", color: "var(--muted)" }}>{u.pc} / {u.pq} / {u.pz}</span>
+                <span style={{ width: 90, textAlign: "right", fontWeight: 800, color: "var(--navy)" }}>{u.total.toLocaleString()}</span>
+              </div>
+            ))}
+            <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>Conns = unique people connected with. C / Q / Qz % = split of that player's actions across connections, quests and quizzes. Points are the in-game total.</div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -920,6 +1095,7 @@ function App() {
   // boot: check URL for screen/admin mode
   useEffect(() => {
     const q = (typeof window !== "undefined" ? window.location.search : "") || "";
+    if (q.includes("summary")) { setView("summary"); return; }
     if (q.includes("screen")) { setView("screen"); return; }
     if (q.includes("admin")) { setView("admin"); return; }
     setView("landing");
@@ -1037,8 +1213,9 @@ function App() {
     const classic = SCREEN_CLASSIC || (typeof window !== "undefined" && /[?&]screen=classic/.test(window.location.search));
     return (<><Styles /><ScreenGate onExit={() => setView("landing")}><AnnounceBar />{classic ? <BigScreen onExit={() => setView("landing")} onAdmin={() => setView("admin")} /> : <BigScreenLive onExit={() => setView("landing")} onAdmin={() => setView("admin")} />}</ScreenGate></>);
   }
-  if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} onScreen={() => setView("screen")} /></>);
-  if (view === "landing") return (<><Styles /><AnnounceBar /><Landing onAuthed={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={(email) => { setPrefillEmail(email || ""); setView("register"); }} onScreen={() => setView("screen")} /></>);
+  if (view === "summary") return (<><Styles /><EventSummary onExit={() => setView("landing")} /></>);
+  if (view === "admin") return (<><Styles /><Admin onExit={() => setView("landing")} onScreen={() => setView("screen")} onSummary={() => setView("summary")} /></>);
+  if (view === "landing") return (<><Styles /><AnnounceBar /><Landing onAuthed={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onAdmin={() => setView("admin")} onRegister={(email) => { setPrefillEmail(email || ""); setView("register"); }} onScreen={() => setView("screen")} onSummary={() => setView("summary")} /></>);
   if (view === "register") return (<><Styles /><AnnounceBar /><Register initialEmail={prefillEmail} onDone={(rec) => { profileSeenRef.current = false; setMe(rec); setView("app"); refresh(rec); }} onBack={() => setView("landing")} /></>);
 
   // ---- main app ----
@@ -1145,7 +1322,6 @@ async function applyAutoAwards(rec, evs) {
   const mInfo = (id) => MISSIONS.find((x) => x.id === id) || {};
   const award = (id, extra) => {
     if (has(id)) return;
-    if (isPaused()) return;
     next = { ...next, selfPoints: (next.selfPoints || 0) + QP[id], missions: { ...(next.missions || {}), [id]: true } };
     const mi = mInfo(id);
     alerts.push({ name: mi.name, icon: mi.icon, grad: mi.grad, done: true, sub: `+${QP[id]} points`, ...(extra || {}) });
@@ -1153,13 +1329,11 @@ async function applyAutoAwards(rec, evs) {
   const cols = collectedMarkets(next);
 
   // --- passport stamp bonuses (scoring, separate from quests) ---
-  if (!isPaused()) {
   if (cols.length >= 3 && !next.trioAwarded) next = { ...next, trioAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.trioBonus };
   if (cols.length >= MARKETS.length && !next.fullAwarded) next = { ...next, fullAwarded: true, selfPoints: (next.selfPoints || 0) + PTS.fullPassport };
   const units = Math.max(0, cols.length - (STAMP_MILESTONE_AT - 1));
   const paid = next.stampBonusUnits || 0;
   if (units > paid) next = { ...next, stampBonusUnits: units, selfPoints: (next.selfPoints || 0) + PTS.stampMilestone * (units - paid) };
-  }
 
   // --- quests ---
   const cons = next.connections || [];
@@ -1249,12 +1423,11 @@ async function awardConnection(me, peer, mult) {
     const myEvs = await sgetAll("inbox:" + me.id + ":");
     alreadyInbound = myEvs.some((e) => e.type === "connection" && e.fromId === peer.id);
   } catch (e) {}
-  const paused = isPaused();
-  const base = (alreadyInbound || paused) ? 0 : PTS.connect;
-  const earned = paused ? 0 : (base + (isNewMarket ? PTS.newMarket : 0)) * mult;
+  const base = alreadyInbound ? 0 : PTS.connect;
+  const earned = (base + (isNewMarket ? PTS.newMarket : 0)) * mult;
 
   let earlyBird = false;
-  if (!paused && !me.earlyBird) {
+  if (!me.earlyBird) {
     try {
       const claimed = await slist("earlybird:");
       const mine = "earlybird:" + me.id;
@@ -1271,7 +1444,7 @@ async function awardConnection(me, peer, mult) {
   };
   await sset("users:" + me.id, next);
   if (!alreadyInbound) {
-    const ev = { id: eid(), type: "connection", points: paused ? 0 : PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", fromHobbies: me.hobbies || [], fromExotic: me.exotic || "", fromNationality: me.nationality || "", fromTenure: me.tenure || "", fromLanguages: me.languages || "", fromTable: me.table || "", ts: Date.now() };
+    const ev = { id: eid(), type: "connection", points: PTS.connect * mult, fromId: me.id, fromName: me.name, fromMarket: me.market, fromTeam: me.team || "", fromHobbies: me.hobbies || [], fromExotic: me.exotic || "", fromNationality: me.nationality || "", fromTenure: me.tenure || "", fromLanguages: me.languages || "", fromTable: me.table || "", ts: Date.now() };
     await sset("inbox:" + peer.id + ":" + ev.id, ev);
   }
   return { next, earned, earlyBird };
@@ -1290,7 +1463,7 @@ async function logHonour(me, key, cap, pts, setMe, refresh, ping, label) {
 /* ============================================================================
    LANDING / SIGN-IN (email recovers an existing profile = account recovery)
 ============================================================================ */
-function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
+function Landing({ onAuthed, onAdmin, onRegister, onScreen, onSummary }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -1334,6 +1507,7 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
         <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 18, justifyContent: "center" }}>
           <span className="link" onClick={onAdmin} style={{ fontSize: 13, color: "#9fb4bd" }}>Gamesmaster access</span>
           <span className="link" onClick={onScreen} style={{ fontSize: 13, color: "#9fb4bd" }}>Leaderboard</span>
+          {onSummary && <span className="link" onClick={onSummary} style={{ fontSize: 13, color: "#9fb4bd" }}>Event summary</span>}
         </div>
         <div className="credit">Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
       </div>
@@ -1346,19 +1520,19 @@ function Landing({ onAuthed, onAdmin, onRegister, onScreen }) {
 
             <div className="howto-step"><div className="howto-num">1</div><div>
               <h4>Get your Connect Code</h4>
-              <p>Complete your profile online to receive your unique Connect Code.</p>
+              <p>Register once for a 3-digit code. It's your identity for the whole event, on any device.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">2</div><div>
-              <h4>Meet people &amp; swap codes</h4>
-              <p>Network with attendees, exchange codes, and enter them into the Connect tab. You both earn points!</p>
+              <h4>Meet people, swap codes</h4>
+              <p>Find someone new, trade codes and enter theirs into Connect. You both score, and a market you've not met before earns bonus points and a passport stamp.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">3</div><div>
-              <h4>Take quizzes &amp; explore</h4>
-              <p>Test your knowledge with trivia, take on Japanese culture challenges, and unlock our Tokyo guide.</p>
+              <h4>Quiz, learn, complete quests</h4>
+              <p>Run a 60-second pop quiz to prove you really talked, pick up Japanese culture and market know-how, and watch quests complete automatically as you go.</p>
             </div></div>
             <div className="howto-step"><div className="howto-num">4</div><div>
-              <h4>Complete quests for bonus points</h4>
-              <p>Maximize your score by completing curated networking challenges as you meet new peers.</p>
+              <h4>Collect the full passport</h4>
+              <p>Three market stamps earns a bonus; every market in the room earns a big one. Climb the live leaderboard as you go.</p>
             </div></div>
 
             <div style={{ background: "var(--paper2)", borderRadius: 10, padding: "12px 14px", margin: "4px 0 16px" }}>
@@ -1549,17 +1723,17 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
   const pct = nx ? Math.min(100, Math.round(((total - rank.min) / (nx.min - rank.min)) * 100)) : 100;
 
   const [editing, setEditing] = useState(false);
-  const [ef, setEf] = useState({ name: "", team: "", tenure: "", table: "", h1: "", h2: "", h3: "", exotic: "" });
+  const [ef, setEf] = useState({ name: "", team: "", tenure: "", table: "", h1: "", h2: "", h3: "" });
   function openEdit() {
     const h = me.hobbies || [];
-    setEf({ name: me.name || "", team: me.team || "", tenure: me.tenure || "", table: me.table || "", h1: h[0] || "", h2: h[1] || "", h3: h[2] || "", exotic: me.exotic || "" });
+    setEf({ name: me.name || "", team: me.team || "", tenure: me.tenure || "", table: me.table || "", h1: h[0] || "", h2: h[1] || "", h3: h[2] || "" });
     setEditing(true);
   }
   const setE = (k) => (e) => setEf((p) => ({ ...p, [k]: e.target.value }));
   async function saveEdit() {
     const hobbies = [ef.h1.trim(), ef.h2.trim(), ef.h3.trim()];
     const name = ef.name.trim() || me.name;
-    const next = { ...me, name, team: ef.team.trim(), tenure: ef.tenure, table: ef.table, hobbies, exotic: ef.exotic.trim() };
+    const next = { ...me, name, team: ef.team.trim(), tenure: ef.tenure, table: ef.table, hobbies };
     setMe(next); await sset("users:" + me.id, next);
     // keep caches in sync: name + team live in code:, name + table live in score:
     const codeRec = await sget("code:" + me.code);
@@ -1651,9 +1825,6 @@ function Passport({ me, total, inbox, collected, ping, setMe, refresh }) {
               </div>
             </Field>
             <p className="muted" style={{ fontSize: 12, margin: "2px 0 12px" }}>Your hobbies become the questions peers answer about you in the quiz.</p>
-            <Field label="Most exotic place you've visited">
-              <input className="input" value={ef.exotic} maxLength={40} onChange={setE("exotic")} placeholder="Madagascar" />
-            </Field>
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditing(false)}>Cancel</button>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveEdit}>Save</button>
@@ -1684,12 +1855,8 @@ function PersonProfile({ person, onClose, showStats = true, loading = false }) {
   ) : null;
   return (
     <div className="modal" style={{ alignItems: "center" }} onClick={onClose}>
-      <div className="sheet" style={{ borderRadius: 18, maxWidth: 380, margin: "0 16px", maxHeight: "86vh", overflowY: "auto", position: "relative" }} onClick={(e) => e.stopPropagation()}>
-        <button aria-label="Close" onPointerUp={onClose} onClick={onClose}
-          style={{ position: "absolute", top: 10, right: 10, width: 32, height: 32, borderRadius: "50%", border: "1px solid var(--line)", background: "var(--paper2)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", touchAction: "manipulation", zIndex: 2 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, paddingRight: 36 }}>
+      <div className="sheet" style={{ borderRadius: 18, maxWidth: 380, margin: "0 16px", maxHeight: "86vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
           <div style={{ minWidth: 0 }}>
             <h2 className="h2" style={{ margin: 0, overflowWrap: "anywhere", wordBreak: "break-word" }}>{person.name}</h2>
             <p className="muted" style={{ fontSize: 13, margin: "3px 0 0" }}>{[person.market, person.team].filter(Boolean).join(" · ")}</p>
@@ -1698,7 +1865,7 @@ function PersonProfile({ person, onClose, showStats = true, loading = false }) {
         </div>
         {showStats && (person.selfPoints != null || stamps != null) && (
           <div style={{ display: "grid", gridTemplateColumns: (person.selfPoints != null && stamps != null) ? "1fr 1fr" : "1fr", gap: 8, marginTop: 12 }}>
-            {person.selfPoints != null && <div className="card" style={{ textAlign: "center", padding: 10 }}><div style={{ fontSize: 22, fontWeight: 900, color: "var(--navy)" }}>{person.selfPoints || 0}</div><div className="eyebrow" style={{ color: "var(--navy)" }}>Points</div></div>}
+            {person.selfPoints != null && <div className="card" style={{ textAlign: "center", padding: 10 }}><div style={{ fontSize: 22, fontWeight: 900, color: "var(--navy)" }}>{person.selfPoints || 0}</div><div className="eyebrow" style={{ color: "var(--navy)" }}>Self points</div></div>}
             {stamps != null && <div className="card" style={{ textAlign: "center", padding: 10 }}><div style={{ fontSize: 22, fontWeight: 900, color: "var(--navy)" }}>{stamps}/{MARKETS.length}</div><div className="eyebrow" style={{ color: "var(--navy)" }}>Stamps</div></div>}
           </div>
         )}
@@ -2376,7 +2543,7 @@ function Missions({ me, total, ping, setMe, refresh }) {
 /* ============================================================================
    BIG SCREEN — venue leaderboard. Open with ?screen
 ============================================================================ */
-function RoomNetwork({ players, pairs, fillStage = true }) {
+function RoomNetwork({ players, pairs }) {
   const cvRef = useRef(null);
   const nodesRef = useRef({});       // id -> node layout/state
   const orderRef = useRef([]);       // stable id order
@@ -2496,9 +2663,9 @@ function RoomNetwork({ players, pairs, fillStage = true }) {
 
   const pct = hud.total ? Math.round(hud.lit / hud.total * 100) : 0;
   return (
-    <div className="lt-card" style={fillStage ? { display: "flex", flexDirection: "column", flex: 1, minHeight: 0 } : {}}>
+    <div className="lt-card">
       <div className="lt-h2">The room · live network</div>
-      <div className="rn-stage" style={{ position: "relative", width: "100%", ...(fillStage ? { flex: 1 } : {}), minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
+      <div className="rn-stage" style={{ position: "relative", width: "100%", aspectRatio: "16 / 6", minHeight: 220, borderRadius: 14, overflow: "hidden", background: "#0a2c42" }}>
         <canvas ref={cvRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", cursor: hover ? "pointer" : "default" }} />
         {hover && (() => {
           const p = (players || []).find((x) => x.id === hover.id);
@@ -2542,12 +2709,6 @@ function RoomNetwork({ players, pairs, fillStage = true }) {
 function BigScreenLive({ onExit, onAdmin }) {
   const [rows, setRows] = useState([]);
   const [count, setCount] = useState(0);
-  const [isNarrow, setIsNarrow] = useState(typeof window !== "undefined" && window.innerWidth <= 760);
-  useEffect(() => {
-    const onR = () => setIsNarrow(window.innerWidth <= 760);
-    window.addEventListener("resize", onR);
-    return () => window.removeEventListener("resize", onR);
-  }, []);
   const [netPlayers, setNetPlayers] = useState([]);
   const [netPairs, setNetPairs] = useState([]);
   const [markets, setMarkets] = useState([]);
@@ -2555,11 +2716,6 @@ function BigScreenLive({ onExit, onAdmin }) {
   const [feed, setFeed] = useState([]);
   const [stats, setStats] = useState({ connections: 0, quizzes: 0, points: 0, active: 0 });
   const [newConnTotal, setNewConnTotal] = useState(0);
-  const [connRows, setConnRows] = useState([]);
-  const [viewProfile, setViewProfile] = useState(null); // read-only full-app preview from a leaderboard name
-  async function openPreview(id) {
-    try { const full = await sget("users:" + id); if (full) setViewProfile(full); } catch {}
-  }
 
   useEffect(() => {
     let alive = true, busy = false;
@@ -2608,25 +2764,15 @@ function BigScreenLive({ onExit, onAdmin }) {
         .slice(0, 15);
       const merged = [...events, ...joins].sort((a, b) => b.ts - a.ts);
 
-      // Top connectors — degree count per player from the connection pairs,
-      // joined with the brand-new connection count carried on each score record.
-      const deg = {};
-      pairs.forEach(([a, b]) => { if (a) deg[a] = (deg[a] || 0) + 1; if (b) deg[b] = (deg[b] || 0) + 1; });
-      const conns = Object.entries(deg).map(([id, n]) => {
-        const p = idMap[id] || {};
-        return { id, name: p.name || "Guest", market: p.market || "", count: n, fresh: p.newConnections || 0 };
-      }).sort((x, y) => y.count - x.count || y.fresh - x.fresh).slice(0, 10);
-
       if (!alive) return;
-      setConnRows(conns);
       setRows(sorted.slice(0, 10)); setCount(players.length);
       setMarkets(ms); setTables(ts8); setFeed(merged.slice(0, 250));
       setStats({ connections, quizzes, points, active });
-      setNewConnTotal(pairs.length);
+      setNewConnTotal(players.reduce((s, p) => s + ((p && p.newConnections) || 0), 0));
       setNetPlayers(players); setNetPairs(pairs);
       } catch (e) {} finally { busy = false; }
     }
-    load(); const t = setInterval(load, 15000); return () => { alive = false; clearInterval(t); };
+    load(); const t = setInterval(load, 6000); return () => { alive = false; clearInterval(t); };
   }, []);
 
   const PROMPTS = ["Meet someone new to score +20", "A new market stamp is worth +30", "Collect every market for a +300 bonus", "Run a quiz with a new contact", "Three markets unlocks a +150 bonus", "Find someone from a market you haven't met"];
@@ -2655,38 +2801,19 @@ function BigScreenLive({ onExit, onAdmin }) {
 
   const maxMarket = Math.max(1, ...markets.map((m) => m.avg));
   const maxTable = Math.max(1, ...tables.map((t) => t.total));
-  // With only a handful of registrations, spreading rows across the full height looks
-  // broken. Pack to the top until the board is full enough to justify edge-to-edge.
-  // On narrow (mobile) screens never fill/spread — content stacks and scrolls naturally.
-  const fill = !isNarrow;
-  const spread = (!isNarrow && rows.length >= 7) ? "space-between" : "flex-start";
-  const cardFill = fill ? { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 } : {};
-  const colFlex = fill ? 1 : "none";
 
   return (
     <div className="scrn lt-wrap" style={{ padding: 0 }}>
-      <div className="lt-firstscreen">
-      <div className="lt-head lt-head-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-        <div>
-          <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
-          <h1 style={{ fontSize: 40, fontWeight: 900, margin: "6px 0 2px" }}>Connection Quest</h1>
+      {(onExit || onAdmin) && (
+        <div style={{ position: "fixed", top: 14, right: 18, display: "flex", gap: 20, zIndex: 5 }}>
+          {onAdmin && <span className="link" onClick={onAdmin} style={{ color: "#6f8893", fontSize: 13 }}>Gamesmaster →</span>}
+          {onExit && <span className="link" onClick={onExit} style={{ color: "#6f8893", fontSize: 13 }}>Exit</span>}
         </div>
-        <div className="lt-headstats" style={{ textAlign: "right", flexShrink: 0, paddingTop: 4 }}>
-          <div className="lt-livepill" style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "flex-end" }}>
-            <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#e0607a", display: "inline-block", animation: "gcq-livepulse 1.6s ease-in-out infinite" }} />
-            <span style={{ color: "#cfe0e6", fontSize: 13, fontWeight: 800, letterSpacing: ".12em" }}>LIVE</span>
-          </div>
-          <div className="lt-statpair" style={{ display: "flex", alignItems: "baseline", gap: 28, justifyContent: "flex-end", marginTop: 10 }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <span style={{ color: "#9fb4bd", fontSize: 14, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700 }}>Explorers</span>
-              <span className="lt-statnum" style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(count || 0).toLocaleString()}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <span style={{ color: "#9fb4bd", fontSize: 14, letterSpacing: ".12em", textTransform: "uppercase", fontWeight: 700 }}>Connections</span>
-              <span className="lt-statnum" style={{ color: "var(--gold)", fontSize: 30, fontWeight: 600, lineHeight: 1, fontFamily: "'Space Mono',monospace" }}>{(newConnTotal || 0).toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
+      )}
+      <div className="lt-head">
+        <div className="eyebrow" style={{ color: "var(--gold)" }}>Asia Pacific Business Forum 2026</div>
+        <h1 style={{ fontSize: 40, fontWeight: 900, margin: "6px 0 2px" }}>Connection Quest</h1>
+        <p style={{ color: "#9fb4bd", fontSize: 17 }}>Live leaderboard · {count} explorers in play{newConnTotal > 0 ? ` · ${newConnTotal.toLocaleString()} new connections sparked` : ""}</p>
       </div>
 
       <div className="lt-ticker">
@@ -2696,26 +2823,22 @@ function BigScreenLive({ onExit, onAdmin }) {
       </div>
 
       <div className="lt-grid">
-        <div className="lt-left">
-          <div className="lt-card" style={fill ? { flex: 1, display: "flex", flexDirection: "column" } : {}}>
-            <div className="lt-h2">Top explorers</div>
-            {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
-            <div style={{ flex: colFlex, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 4 : 0 }}>
-            {rows.map((r, i) => (
-              <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
-                <span className="lt-rank">{i + 1}</span>
-                <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
-                <span className="lt-total">{r.total}</span>
-              </div>
-            ))}
+        <div className="lt-card">
+          <div className="lt-h2">Top explorers</div>
+          {rows.length === 0 && <p style={{ color: "#9fb4bd" }}>Waiting for the first connections…</p>}
+          {rows.map((r, i) => (
+            <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")}>
+              <span className="lt-rank">{i + 1}</span>
+              <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
+              <span className="lt-total">{r.total}</span>
             </div>
-          </div>
+          ))}
         </div>
 
         <div className="lt-right">
-          <div className="lt-card" style={cardFill}>
+          <div className="lt-card">
             <div className="lt-h2">Market race · avg points per person</div>
-            <div className="lt-race" style={{ flex: colFlex, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
+            <div className="lt-race">
               {markets.map((m) => (
                 <div className="lt-rrow" key={m.market}>
                   <span className="lt-rlabel">{m.market}</span>
@@ -2727,9 +2850,9 @@ function BigScreenLive({ onExit, onAdmin }) {
             </div>
           </div>
 
-          <div className="lt-card" style={cardFill}>
+          <div className="lt-card">
             <div className="lt-h2">Table rank · total points</div>
-            <div className="lt-race" style={{ flex: colFlex, display: "flex", flexDirection: "column", justifyContent: spread, gap: spread === "flex-start" ? 12 : 0 }}>
+            <div className="lt-race">
               {tables.map((t, i) => (
                 <div className="lt-rrow" key={t.table}>
                   <span className="lt-rlabel">Table {t.table}</span>
@@ -2740,22 +2863,7 @@ function BigScreenLive({ onExit, onAdmin }) {
               {tables.length === 0 && <p style={{ color: "#9fb4bd" }}>No table data yet.</p>}
             </div>
           </div>
-        </div>
-      </div>
-      </div>
-      <div className="lt-belowfold">
-        <div className="lt-bf-grid">
-          <div className="lt-card">
-            <div className="lt-h2">Top connectors · connections (new)</div>
-            {connRows.length === 0 && <p style={{ color: "#9fb4bd" }}>No connections yet.</p>}
-            {connRows.map((r, i) => (
-              <div key={r.id} className={"lt-lrow" + (i < 3 ? " top" : "")} style={{ cursor: "pointer", touchAction: "manipulation" }} onPointerUp={() => openPreview(r.id)} onClick={() => openPreview(r.id)}>
-                <span className="lt-rank">{i + 1}</span>
-                <span className="lt-name">{r.name}<span className="lt-nmk">{r.market}</span></span>
-                <span className="lt-total">{r.count}<span className="lt-nmk" style={{ marginLeft: 4 }}>({r.fresh})</span></span>
-              </div>
-            ))}
-          </div>
+
           <div className="lt-card">
             <div className="lt-h2">Last 10 minutes</div>
             <div className="lt-stats">
@@ -2767,19 +2875,10 @@ function BigScreenLive({ onExit, onAdmin }) {
           </div>
         </div>
       </div>
-      <div className="lt-roomscreen">
-        <div className="lt-room" style={{ flex: 1, minHeight: 0 }}>
-          <RoomNetwork players={netPlayers} pairs={netPairs} fillStage={!isNarrow} />
-        </div>
+      <div className="lt-room">
+        <RoomNetwork players={netPlayers} pairs={netPairs} />
       </div>
-      <div className="credit lt-credit" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 36px 16px", position: "relative" }}>
-        <span>Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></span>
-        <span className="lt-credit-links" style={{ position: "absolute", right: 36, display: "flex", gap: 20 }}>
-          {onAdmin && <span className="link" onClick={onAdmin} style={{ color: "#6f8893", fontSize: 13 }}>Gamesmaster →</span>}
-          {onExit && <span className="link" onClick={onExit} style={{ color: "#6f8893", fontSize: 13 }}>Exit</span>}
-        </span>
-      </div>
-      {viewProfile && <PlayerPreview rec={viewProfile} onExit={() => setViewProfile(null)} />}
+      <div className="credit" style={{ padding: "10px 0 16px" }}>Developed by <a href="https://www.linkedin.com/in/ashleighroberts/" target="_blank" rel="noopener noreferrer">Ash Roberts</a></div>
     </div>
   );
 }
@@ -2903,7 +3002,7 @@ function PlayerPreview({ rec, onExit }) {
   );
 }
 
-function Admin({ onExit, onScreen }) {
+function Admin({ onExit, onScreen, onSummary }) {
   const [ok, setOk] = useState(false);
   const [pin, setPin] = useState("");
   if (!ok) return (
@@ -2917,10 +3016,10 @@ function Admin({ onExit, onScreen }) {
       </div>
     </div></div>
   );
-  return <AdminPanel onExit={onExit} onScreen={onScreen} />;
+  return <AdminPanel onExit={onExit} onScreen={onScreen} onSummary={onSummary} />;
 }
 
-function AdminPanel({ onExit, onScreen }) {
+function AdminPanel({ onExit, onScreen, onSummary }) {
   const [users, setUsers] = useState([]);
   const [scores, setScores] = useState([]);
   const [flash, setFlashState] = useState(null);
@@ -2958,10 +3057,6 @@ function AdminPanel({ onExit, onScreen }) {
   const dist = {};
   scores.forEach((s) => { dist[s.market] = (dist[s.market] || 0) + 1; });
   const maxd = Math.max(1, ...Object.values(dist));
-  // Connection totals: each user's own connections array is one-directional, so the
-  // sum across users is the total connection count. New connections come off score records.
-  const connTotal = users.reduce((s, u) => s + ((u && u.connections && u.connections.length) || 0), 0);
-  const newConnTotal = scores.reduce((s, u) => s + ((u && u.newConnections) || 0), 0);
 
   async function trigger(title, desc, mult, mins) {
     const f = { id: eid(), title, desc, mult, endsAt: Date.now() + mins * 60000 };
@@ -3034,27 +3129,20 @@ function AdminPanel({ onExit, onScreen }) {
         <div style={{ display: "flex", gap: 16 }}>
           <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>← Home</span>
           {onScreen && <span className="link" style={{ color: "var(--gold)", fontSize: 13 }} onClick={onScreen}>Leaderboard</span>}
+          {onSummary && <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onSummary}>Summary</span>}
           <span className="link" style={{ color: "#9fb4bd", fontSize: 13 }} onClick={onExit}>Exit</span>
         </div>
       </div>
       {msg && <div className="flash" style={{ marginBottom: 12, background: "var(--green)" }}>{msg}</div>}
 
-      <div className="gm-stats" style={{ marginBottom: 12 }}>
-        <div className="card gm-stat">
-          <div className="gm-statn">{users.length.toLocaleString()}</div>
-          <div className="eyebrow gm-statl">Registered</div>
+      <div className="grid2" style={{ marginBottom: 12 }}>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 34, fontWeight: 900, color: "var(--navy)" }}>{users.length}</div>
+          <div className="eyebrow" style={{ color: "var(--navy)" }}>Registered</div>
         </div>
-        <div className="card gm-stat">
-          <div className="gm-statn">{Object.keys(dist).length}</div>
-          <div className="eyebrow gm-statl">Markets active</div>
-        </div>
-        <div className="card gm-stat">
-          <div className="gm-statn">{connTotal.toLocaleString()}</div>
-          <div className="eyebrow gm-statl">Connections</div>
-        </div>
-        <div className="card gm-stat">
-          <div className="gm-statn">{newConnTotal.toLocaleString()}</div>
-          <div className="eyebrow gm-statl">New connections</div>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 34, fontWeight: 900, color: "var(--navy)" }}>{Object.keys(dist).length}</div>
+          <div className="eyebrow" style={{ color: "var(--navy)" }}>Markets active</div>
         </div>
       </div>
 
@@ -3175,11 +3263,11 @@ function AdminPanel({ onExit, onScreen }) {
             const total = (u.selfPoints || 0);
             return (
               <div key={u.id} style={{ borderTop: "1px solid var(--line)", paddingTop: 10, marginTop: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                  <div onClick={() => setViewU(u)} style={{ cursor: "pointer", minWidth: 0 }}><p style={{ fontWeight: 800, margin: 0 }}>{u.name}</p><p className="muted" style={{ fontSize: 12, margin: "2px 0 0" }}>{u.email} · {u.market}{u.team ? ` · ${u.team}` : ""}{u.table ? ` · Table ${u.table}` : ""}</p></div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)", lineHeight: 1.1 }}>{u.code}</div></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div onClick={() => setViewU(u)} style={{ cursor: "pointer", minWidth: 0 }}><p style={{ fontWeight: 800 }}>{u.name}</p><p className="muted" style={{ fontSize: 12 }}>{u.email} · {u.market}{u.team ? ` · ${u.team}` : ""}{u.table ? ` · Table ${u.table}` : ""}</p></div>
+                  <div style={{ textAlign: "right" }}><div className="mono" style={{ fontWeight: 700, fontSize: 18, color: "var(--navy)" }}>{u.code}</div><p className="muted" style={{ fontSize: 11 }}>Connect code</p></div>
                 </div>
-                <p style={{ fontSize: 13, margin: "6px 0" }}>Points: <b>{total}</b> <span className="muted">(inbound credits add on top)</span></p>
+                <p style={{ fontSize: 13, margin: "6px 0" }}>Self points: <b>{total}</b> <span className="muted">(inbound credits add on top)</span></p>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   <button className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 13 }} onClick={() => adjust(u, 50)}>+50</button>
                   <button className="btn btn-ghost" style={{ padding: "8px 10px", fontSize: 13 }} onClick={() => adjust(u, -50)}>−50</button>
@@ -3189,6 +3277,7 @@ function AdminPanel({ onExit, onScreen }) {
                   <span className="link" style={{ color: "var(--navy)", fontSize: 13.5, fontWeight: 700, padding: "6px 0", touchAction: "manipulation" }} onClick={() => setViewU(u)}>View summary</span>
                   <span className="link" style={{ color: "var(--navy)", fontSize: 13.5, fontWeight: 700, padding: "6px 0", touchAction: "manipulation" }} onClick={() => setViewProfile(u)}>Open their app (read-only)</span>
                 </div>
+                <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>Phone died? They simply sign in again with <b>{u.email}</b> to restore this passport and code.</p>
               </div>
             );
           })}
