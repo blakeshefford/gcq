@@ -521,7 +521,7 @@ function Styles() {
     .bar .track>span{display:block;height:100%;background:var(--navy);border-radius:6px;transition:width .6s}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .es-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}
-    .es-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:start}
+    .es-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:stretch}
     .es-grid .card{margin:0}
     .es-3{grid-column:span 3}.es-2{grid-column:span 2}.es-6{grid-column:span 6}
     @media(max-width:900px){.es-grid{grid-template-columns:1fr}.es-3,.es-2,.es-6{grid-column:auto}.es-kpis{grid-template-columns:repeat(3,1fr)}}
@@ -878,9 +878,9 @@ function EventSummary({ onExit }) {
   const Seg = ({ w, c }) => <div style={{ width: w + "%", background: c, height: "100%" }} />;
   const Legend = ({ c, label, val }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13 }}>
-      <span style={{ width: 11, height: 11, borderRadius: 3, background: c, display: "inline-block" }} />
-      <span style={{ fontWeight: 700, color: "var(--navy)" }}>{label}</span>
-      <span className="muted">{val}</span>
+      <span style={{ width: 11, height: 11, borderRadius: 3, background: c, display: "inline-block", flexShrink: 0 }} />
+      <span style={{ fontWeight: 700, color: "var(--navy)", whiteSpace: "nowrap" }}>{label}</span>
+      <span className="muted" style={{ whiteSpace: "nowrap" }}>{val}</span>
     </div>
   );
   const Row = ({ label, w, val }) => (
@@ -939,15 +939,13 @@ function EventSummary({ onExit }) {
               <div style={{ width: Math.round(100 * d.firstTime / nkTot) + "%", background: "var(--gold)", color: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.firstTime}</div>
               <div style={{ width: Math.round(100 * d.known / nkTot) + "%", background: "var(--navy)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{d.known}</div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, justifyContent: "space-between" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <Legend c="var(--gold)" label="First-time" val={Math.round(100 * d.firstTime / nkTot) + "% · " + d.firstTime.toLocaleString()} />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <Legend c="var(--navy)" label="Existing connection" val={Math.round(100 * d.known / nkTot) + "% · " + d.known.toLocaleString()} />
-                <div style={{ whiteSpace: "nowrap" }}>
-                  <span style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)" }}>{d.crossPct}%</span>
-                  <span className="muted" style={{ fontSize: 13, marginLeft: 8 }}>cross-market connections</span>
-                </div>
-              </div>
+              <Legend c="var(--navy)" label="Existing connection" val={Math.round(100 * d.known / nkTot) + "% · " + d.known.toLocaleString()} />
+            </div>
+            <div style={{ marginTop: "auto", paddingTop: 14, textAlign: "right", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 30, fontWeight: 900, color: "var(--navy)" }}>{d.crossPct}%</span>
+              <span className="muted" style={{ fontSize: 13, marginLeft: 8 }}>cross-market connections</span>
             </div>
           </div>
 
