@@ -3317,6 +3317,47 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Post-event gate: the game is closed, so the whole app sits behind a password.
+// Unlock persists for the browser session so navigation between pages stays open.
+const CLOSED_PASSWORD = "tokyo2026";
+function ClosedGate({ children }) {
+  const [ok, setOk] = useState(() => {
+    try { return sessionStorage.getItem("gcq_unlocked") === "1"; } catch (e) { return false; }
+  });
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState(false);
+  if (ok) return children;
+  const submit = () => {
+    if (pw.trim() === CLOSED_PASSWORD) {
+      try { sessionStorage.setItem("gcq_unlocked", "1"); } catch (e) {}
+      setOk(true);
+    } else {
+      setErr(true);
+    }
+  };
+  return (
+    <div className="gcq"><div className="wrap" style={{ justifyContent: "center", alignItems: "center", textAlign: "center", padding: 24 }}>
+      <Styles />
+      <div style={{ maxWidth: 340 }}>
+        <div className="eyebrow" style={{ color: "#4ea3d6" }}>Connection Quest</div>
+        <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: "8px 0 6px" }}>The game has now closed</h2>
+        <p style={{ color: "#c7d4dd", fontSize: 14, lineHeight: 1.5, margin: "0 auto 18px" }}>Thanks for playing!</p>
+        <input
+          type="password"
+          value={pw}
+          onChange={(e) => { setPw(e.target.value); setErr(false); }}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          placeholder="Enter password"
+          autoFocus
+          style={{ width: "100%", boxSizing: "border-box", padding: "11px 14px", borderRadius: 10, border: err ? "1px solid var(--seal)" : "1px solid rgba(255,255,255,.18)", background: "var(--navy2)", color: "#fff", fontSize: 15, outline: "none", marginBottom: 10 }}
+        />
+        {err ? <p style={{ color: "var(--seal)", fontSize: 13, margin: "0 0 10px" }}>Incorrect password</p> : null}
+        <button onClick={submit} style={{ background: "var(--gold)", color: "#002233", border: 0, borderRadius: 999, padding: "11px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", width: "100%" }}>Enter</button>
+      </div>
+    </div></div>
+  );
+}
+
 const _root = ReactDOM.createRoot(document.getElementById("root"));
-_root.render(<ErrorBoundary>{CONFIGURED ? <App /> : <SetupNotice />}</ErrorBoundary>);
+_root.render(<ErrorBoundary><ClosedGate>{CONFIGURED ? <App /> : <SetupNotice />}</ClosedGate></ErrorBoundary>);
 </script></body></html>
